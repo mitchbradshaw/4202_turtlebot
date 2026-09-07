@@ -11,14 +11,14 @@ class FrontierDetector(Node):
 
 
         #Subscribe to SLAM-map
-        self.subscribtion = self.create_subsriction(
+        self.subscription = self.create_subscription(
             OccupancyGrid,     # Message type
             '/map',            # Topic
             self.map_callback, # Associated callback function
             10                 # Message queue length
         )
 
-        self.subscribtion # Prevent unused variable warning
+        self.subscription # Prevent unused variable warning
 
 
         self.FREE = 0
@@ -31,7 +31,7 @@ class FrontierDetector(Node):
 
         width = msg.info.width 
         height = msg.info.height
-        resolution = msg.info.resoluton # Size of a cell in meter
+        resolution = msg.info.resolution # Size of a cell in meter
         data = msg.data                 # 1D list of values of the cells
 
 
@@ -60,39 +60,39 @@ class FrontierDetector(Node):
 
         
 
-        # Finds cells that are free and have atleast one unkown neighbour
-        def find_frontiers(self, data, width, height):
-            frontiers = []
+    # Finds cells that are free and have atleast one unkown neighbour
+    def find_frontiers(self, data, width, height):
+        frontiers = []
 
-            for row in range(height):
-                for col in range(width):
-                    idx = row * width + col # Find index of every cell in 1D cell-list
-                    
-                    if data[idx] != self.FREE:
+        for row in range(height):
+            for col in range(width):
+                idx = row * width + col # Find index of every cell in 1D cell-list
+                
+                if data[idx] != self.FREE:
+                    continue
+                
+                # Finding 4 connected neighbours
+                neighbours = [
+                    (row - 1, col), # Up
+                    (row + 1, col), # Down
+                    (row, col - 1), # Left
+                    (row, col + 1)  # Right
+                ]
+
+
+                for n_row, n_col in neighbours:
+                    # Check if neighbour is inside map
+                    if n_row < 0 or n_row >= height: 
                         continue
-                    
-                    # Finding 4 connected neighbours
-                    neighbours = [
-                        (row - 1, col), # Up
-                        (row + 1, col), # Down
-                        (row, col - 1), # Left
-                        (row, col + 1)  # Right
-                    ]
+                    if n_col < 0 or n_col >= width:
+                        continue
 
-
-                    for n_row, n_col in neighbours:
-                        # Check if neighbour is inside map
-                        if n_row < 0 or n_row >= height: 
-                            continue
-                        if n_col < 0 or n_col >= width:
-                            continue
-
-                        # Find index and check if its unkown
-                        neighbour_idx = n_row * width + n_col
-                        if data[neighbour_idx] == self.UNKOWN:
-                            frontiers.append((row, col))
-                            break
-            return frontiers
+                    # Find index and check if its unkown
+                    neighbour_idx = n_row * width + n_col
+                    if data[neighbour_idx] == self.UNKOWN:
+                        frontiers.append((row, col))
+                        break
+        return frontiers
 
 
 def main(args = None):

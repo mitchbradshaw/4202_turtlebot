@@ -24,6 +24,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
+            'frontier_detector = exploration.frontier_detector:main',
         ],
     },
 )
