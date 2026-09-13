@@ -1,0 +1,85 @@
+notes for running gazebo / ros
+
+start by setting turtlebot model
+export TURTLEBOT3_MODEL=waffle_pi
+
+open gazebo sim
+ros2 launch <package name> <package script py>
+
+open new terminal
+launch SLAM
+ros2 launch slam_toolbox online_async_launch.py
+
+open new terminal
+set turtlebot model again, export...
+export TURTLEBOT3_MODEL=waffle_pi
+open rvis2:
+ros2 run rviz2 rviz2
+
+In RViz, add the \map topic (Add → By topic → Map).
+- means you're subscribing to the 'map' publications in RViz
+
+to move bot
+open new terminal
+export TURTLEBOT3_MODEL=waffle_pi
+ros2 run turtlebot3_teleop teleop_keyboard
+
+to make new package
+cd into workspace/src
+ros2 pkg create --build-type ament_python waypoint_commander --dependencies rclpy nav2_msgs geometry_msgs
+
+Note : to add other message types and dependencies can be found https://docs.ros2.org/foxy/api/
+then:
+cd ../src/<package name>/<package name> 
+create new python:
+touch <script name>.py
+
+In python script:
+import relevant files:
+from nav2_msgs import msg
+import rclpy
+from rclpy.node import Node
+from nav2_msgs.msg import BehaviorTreeLog (example)
+from geometry_msgs.msg import PoseStamped (example)
+
+main section:
+def main(args=None):
+    rclpy.init(args=args)
+
+    # Create a new node
+    <var name> = <node class name>()
+    # Execute the node
+    rclpy.spin(<var name>)
+
+
+if __name__ == '__main__':
+    main()
+    
+    
+Node class:
+create node that subscribes to the information you seek, publishes to a topic that rviz can access
+
+Giving ROS access:
+in top level directory of <package name>, in setup.py, inside square brackets of 'console_scripts':
+'<script name (no py)> = <package name>.<scriptname>:main'
+
+in terminal, in workspace folder, build package:
+colcon build --symlink-install --packages-select <package name>
+
+source install/setup.bash
+
+run node (after gazebo/rvis are set up):
+ros2 run <package name> <package script>
+
+
+for looking at what is being published
+ros2 topic hz /camera/image_raw
+for looking at k matrix and resolution
+ros2 topic echo /camera/camera_info --once 
+for looking directly at camera feed
+ros2 run rqt_image_view rqt_image_view
+
+for running marker_images:
+ros2 bag play marker_run --loop --clock
+ros2 run rviz2 rviz2 --ros-args -p use_sim_time:=true
+ros2 run mapping_pkg camera_reader --ros-args -p use_sim_time:=true

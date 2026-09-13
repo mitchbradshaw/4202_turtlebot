@@ -1,0 +1,16 @@
+[2.018s] Invoking command in '/home/mitch/metr4202_ws/src/waypoint_commander/build/waypoint_commander': PYTHONPATH=/home/mitch/metr4202_ws/src/waypoint_commander/build/waypoint_commander/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/mitch/metr4202_ws/src/waypoint_commander/install/waypoint_commander/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /home/mitch/metr4202_ws/src/waypoint_commander/build/waypoint_commander/build --no-deps symlink_data
+[2.395s] running develop
+[2.631s] running egg_info
+[2.632s] writing waypoint_commander.egg-info/PKG-INFO
+[2.633s] writing dependency_links to waypoint_commander.egg-info/dependency_links.txt
+[2.634s] writing entry points to waypoint_commander.egg-info/entry_points.txt
+[2.636s] writing requirements to waypoint_commander.egg-info/requires.txt
+[2.638s] writing top-level names to waypoint_commander.egg-info/top_level.txt
+[2.641s] reading manifest file 'waypoint_commander.egg-info/SOURCES.txt'
+[2.644s] writing manifest file 'waypoint_commander.egg-info/SOURCES.txt'
+[2.647s] running build_ext
+[2.647s] Creating /home/mitch/metr4202_ws/src/waypoint_commander/install/waypoint_commander/lib/python3.10/site-packages/waypoint-commander.egg-link (link to .)
+[2.653s] 
+[2.663s] Installed /home/mitch/metr4202_ws/src/waypoint_commander/build/waypoint_commander
+[2.664s] running symlink_data
+[2.696s] Invoked command in '/home/mitch/metr4202_ws/src/waypoint_commander/build/waypoint_commander' returned '0': PYTHONPATH=/home/mitch/metr4202_ws/src/waypoint_commander/build/waypoint_commander/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/mitch/metr4202_ws/src/waypoint_commander/install/waypoint_commander/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /home/mitch/metr4202_ws/src/waypoint_commander/build/waypoint_commander/build --no-deps symlink_data
