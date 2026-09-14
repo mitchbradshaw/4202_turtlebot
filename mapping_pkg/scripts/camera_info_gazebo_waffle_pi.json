@@ -1,0 +1,9 @@
+{
+  "_comment": "Expected Gazebo intrinsics for the Waffle Pi camera (640x480, horizontal_fov 1.085595 rad): fx = fy = 640 / (2 tan(fov/2)), cx = (w+1)/2, cy = (h+1)/2. Replace with the real values from `ros2 topic echo /camera/camera_info --once` if they differ.",
+  "width": 640,
+  "height": 480,
+  "k": [530.4699, 0.0, 320.5,
+        0.0, 530.4699, 240.5,
+        0.0, 0.0, 1.0],
+  "d": [0.0, 0.0, 0.0, 0.0, 0.0]
+}

@@ -3,14 +3,20 @@
 <package format="3">
   <name>mapping_pkg</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
+  <description>METR4202 ArUco marker detection for TurtleBot3 Waffle Pi</description>
   <maintainer email="mitch@todo.todo">mitch</maintainer>
   <license>TODO: License declaration</license>
 
   <depend>rclpy</depend>
-  <depend>nav2_msgs</depend>
-  <depend>geometry_msgs</depend>
   <depend>sensor_msgs</depend>
+  <depend>cv_bridge</depend>
+  <!-- On Ubuntu 22.04 these resolve to apt python3-opencv (4.5.x, includes cv2.aruco)
+       and python3-numpy. Do not pip-install opencv on the ROS machine. -->
+  <exec_depend>python3-opencv</exec_depend>
+  <exec_depend>python3-numpy</exec_depend>
+  <!-- Only needed by launch/camera_only.launch.py -->
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
