@@ -1,0 +1,8 @@
+# colcon build output (at the workspace root and anywhere nested)
+build/
+install/
+log/
+
+# Python bytecode
+__pycache__/
+*.pyc
