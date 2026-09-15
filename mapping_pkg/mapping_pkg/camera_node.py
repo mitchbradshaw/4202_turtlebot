@@ -3,7 +3,7 @@
 Jobs: subscribe, convert messages <-> NumPy with cv_bridge, call aruco_core,
 publish the debug image, log. No detection maths belongs in this file.
 """
-
+#hello
 import numpy as np
 import rclpy
 from rclpy.node import Node
