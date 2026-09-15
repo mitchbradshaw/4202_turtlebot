@@ -2,6 +2,9 @@
 build/
 install/
 log/
+m4202_py_pkg/
+metr4202_aruco_explore/
+waypoint_commander/
 
 # Python bytecode
 __pycache__/
