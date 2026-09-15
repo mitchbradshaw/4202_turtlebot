@@ -42,9 +42,7 @@ class MapMarkersNode(Node):
 
         # Initialize marker storage
         self.detected_markers = {}
-
-        
-
+      
     
     def update_markers(self, marker_id, position):
         """
