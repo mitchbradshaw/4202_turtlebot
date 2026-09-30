@@ -26,7 +26,7 @@ class Detection:
     rvec: np.ndarray      # shape (3,), Rodrigues rotation, marker -> camera optical frame
     tvec: np.ndarray      # shape (3,), marker centre in camera optical frame, metres
     range_m: float        # Euclidean distance camera centre -> marker centre, metres
-
+    pixel_area: float     # area of detected target, can calculate area and compare to estimate viewing angle/range
 
 # --------------------------------------------------------------------------
 # OpenCV version handling.
@@ -164,6 +164,7 @@ def detect_markers(image_bgr, K, dist_coeffs, marker_size_m=DEFAULT_MARKER_SIZE_
             rvec=rvec,
             tvec=tvec,
             range_m=float(np.linalg.norm(tvec)),
+            pixel_area=float(cv2.contourArea(image_points.astype(np.float32))),
         ))
 
     return detections

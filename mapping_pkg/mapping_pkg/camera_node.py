@@ -3,7 +3,7 @@
 Jobs: subscribe, convert messages <-> NumPy with cv_bridge, call aruco_core,
 publish the debug image, log. No detection maths belongs in this file.
 """
-#hello
+
 import numpy as np
 import rclpy
 from rclpy.node import Node
@@ -12,6 +12,7 @@ from rclpy.qos import qos_profile_sensor_data
 from cv_bridge import CvBridge
 from sensor_msgs.msg import CameraInfo, CompressedImage, Image
 
+from mapping_interfaces.msg import MarkerDetection, MarkerDetectionArray 
 from mapping_pkg import aruco_core
 
 
@@ -34,6 +35,8 @@ class CameraNode(Node):
         # e.g. /camera/image_raw/compressed. The topic name is used verbatim.
         self.declare_parameter('use_compressed', False)
         self.declare_parameter('debug_image_topic', '/aruco/debug_image')
+        # This is where MarkerDetectionArray goes for each frame
+        self.declare_parameter('detections_topic', '/aruco/detections')
         # 0.1 m verified from the world SDF: 0.1 x 0.1 box, texture is
         # black edge-to-edge (no white margin).
         self.declare_parameter('marker_size', aruco_core.DEFAULT_MARKER_SIZE_M)
@@ -44,6 +47,7 @@ class CameraNode(Node):
         camera_info_topic = self.get_parameter('camera_info_topic').value
         self.use_compressed = self.get_parameter('use_compressed').value
         debug_image_topic = self.get_parameter('debug_image_topic').value
+        detections_topic = self.get_parameter('detections_topic').value
         self.marker_size = float(self.get_parameter('marker_size').value)
         self.dictionary_name = self.get_parameter('aruco_dictionary').value
 
@@ -80,6 +84,9 @@ class CameraNode(Node):
         else:
             self.create_subscription(
                 Image, image_topic, self.image_callback, qos_profile_sensor_data)
+
+        # Publisher is RELIABLE (default), depth 10 for averages
+        self.detections_pub = self.create_publisher(MarkerDetectionArray, detections_topic, 10)
 
         # Publisher is RELIABLE (default), depth 1: reliable publishers match
         # both reliable and best-effort subscribers, so RViz connects whatever
@@ -133,6 +140,11 @@ class CameraNode(Node):
         # ---- algorithm (all maths lives in aruco_core)
         detections = aruco_core.detect_markers(
             image_bgr, self.K, self.dist, self.marker_size, self.dictionary_name)
+
+        # ---- detections -> published for each frame (so can tell diff between saw nothing and no data)
+        self.detections_pub.publish(self.to_detection_array(msg.header, detections))
+
+
         annotated = aruco_core.draw_detections(
             image_bgr, detections, self.K, self.dist, self.marker_size)
 
@@ -155,6 +167,27 @@ class CameraNode(Node):
                 for d in detections
             ]
             self.get_logger().info('Detected ' + '; '.join(parts), throttle_duration_sec=1.0)
+
+    @staticmethod
+    def to_detection_array(header, detections):
+        """list[aruco_core.Detection] -> MarkerDetectionArray.
+
+        header is the source image's header: its stamp is the capture time and
+        its frame_id is the optical frame the poses are expressed in. Map node can use this for positioning(?)
+        """
+        out = MarkerDetectionArray()
+        out.header = header
+        for d in detections:
+            m = MarkerDetection()
+            m.id = d.marker_id
+            m.position.x = float(d.tvec[0])
+            m.position.y = float(d.tvec[1])
+            m.position.z = float(d.tvec[2])
+            m.range_m = d.range_m
+            m.pixel_area = d.pixel_area
+            out.markers.append(m)
+        return out
+
 
 
 def main(args=None):

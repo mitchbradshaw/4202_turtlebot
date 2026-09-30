@@ -8,6 +8,7 @@
   <license>TODO: License declaration</license>
 
   <depend>rclpy</depend>
+  <exec_depend>mapping_interfaces</exec_depend>
   <depend>sensor_msgs</depend>
   <depend>cv_bridge</depend>
   <!-- On Ubuntu 22.04 these resolve to apt python3-opencv (4.5.x, includes cv2.aruco)
