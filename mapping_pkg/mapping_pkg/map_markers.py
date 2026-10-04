@@ -36,6 +36,7 @@ from tf2_ros.transform_listener import TransformListener
 from geometry_msgs.msg import PointStamped
 from tf2_geometry_msgs import do_transform_point
 
+MAX_RANGE = 2
 
 class MapMarkersNode(Node):
     
@@ -80,17 +81,27 @@ class MapMarkersNode(Node):
     #assigns map positions to aruco marker
     def get_detected_markers(self, msg):
         # maybe use a minimum distance or pixel area to filter out bad reads
-        
+
+        in_range = []
         from_frame = msg.header.frame_id
         to_frame = self.map_frame 
         frame_time = Time.from_msg(msg.header.stamp)
 
-        #if marker
         if not msg.markers:
-            return 
+                    return 
+
+        #Checks range of marker detection, bigger will have larger error
+        for m in msg.markers:
+
+            if m.range_m <= MAX_RANGE:
+            
+                in_range.append(m)
+
+            else:
+                return
+            
         
         try: 
-
             # this gets the position of the camera when detection was made
             transform = self.tf_buffer.lookup_transform(
                         to_frame, 
