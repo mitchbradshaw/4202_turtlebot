@@ -1,0 +1,135 @@
+material tw_aruco_6x6_100mm_0
+{
+  technique
+  {
+    pass
+    {
+      lighting off
+      texture_unit
+      {
+        texture tw_6x6_1000-0.png
+        filtering none none none
+        scale 1.0 1.0
+      }
+    }
+  }
+}
+
+material tw_aruco_6x6_100mm_2
+{
+  technique
+  {
+    pass
+    {
+      lighting off
+      texture_unit
+      {
+        texture tw_6x6_1000-2.png
+        filtering none none none
+        scale 1.0 1.0
+      }
+    }
+  }
+}
+
+material tw_aruco_6x6_100mm_7
+{
+  technique
+  {
+    pass
+    {
+      lighting off
+      texture_unit
+      {
+        texture tw_6x6_1000-7.png
+        filtering none none none
+        scale 1.0 1.0
+      }
+    }
+  }
+}
+
+material tw_aruco_6x6_100mm_13
+{
+  technique
+  {
+    pass
+    {
+      lighting off
+      texture_unit
+      {
+        texture tw_6x6_1000-13.png
+        filtering none none none
+        scale 1.0 1.0
+      }
+    }
+  }
+}
+
+material tw_aruco_6x6_100mm_21
+{
+  technique
+  {
+    pass
+    {
+      lighting off
+      texture_unit
+      {
+        texture tw_6x6_1000-21.png
+        filtering none none none
+        scale 1.0 1.0
+      }
+    }
+  }
+}
+
+material tw_aruco_6x6_100mm_22
+{
+  technique
+  {
+    pass
+    {
+      lighting off
+      texture_unit
+      {
+        texture tw_6x6_1000-22.png
+        filtering none none none
+        scale 1.0 1.0
+      }
+    }
+  }
+}
+
+material tw_aruco_6x6_100mm_42
+{
+  technique
+  {
+    pass
+    {
+      lighting off
+      texture_unit
+      {
+        texture tw_6x6_1000-42.png
+        filtering none none none
+        scale 1.0 1.0
+      }
+    }
+  }
+}
+
+material tw_aruco_6x6_100mm_64
+{
+  technique
+  {
+    pass
+    {
+      lighting off
+      texture_unit
+      {
+        texture tw_6x6_1000-64.png
+        filtering none none none
+        scale 1.0 1.0
+      }
+    }
+  }
+}

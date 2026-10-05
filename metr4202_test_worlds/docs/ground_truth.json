@@ -1,0 +1,548 @@
+{
+  "horseshoe": {
+    "spawn": {
+      "x": -3.0,
+      "y": 3.5,
+      "yaw": -1.5708
+    },
+    "reachable_m2": 56.1,
+    "stranded_m2": 0.0,
+    "markers": [
+      {
+        "id": 0,
+        "x": -3.0,
+        "y": 4.69,
+        "z": 0.24,
+        "tag_centre": [
+          -3.0,
+          4.63,
+          0.24
+        ],
+        "tag_normal": [
+          -0.0,
+          -1.0,
+          0.0
+        ],
+        "tag_centre_in_spawn_frame": [
+          -1.13,
+          0.0,
+          0.24
+        ],
+        "readable_with_0p30_clearance": true,
+        "readable_area_m2": 3.69,
+        "max_read_range_m": 2.6,
+        "note": "directly BEHIND the spawn pose (robot starts facing away)"
+      },
+      {
+        "id": 2,
+        "x": -4.0,
+        "y": -4.69,
+        "z": 0.24,
+        "tag_centre": [
+          -4.0,
+          -4.63,
+          0.24
+        ],
+        "tag_normal": [
+          -0.0,
+          1.0,
+          0.0
+        ],
+        "tag_centre_in_spawn_frame": [
+          8.13,
+          -1.0,
+          0.24
+        ],
+        "readable_with_0p30_clearance": true,
+        "readable_area_m2": 3.78,
+        "max_read_range_m": 2.65,
+        "note": "bottom of the left arm, seen head-on after the 2nd baffle"
+      },
+      {
+        "id": 42,
+        "x": 0.31,
+        "y": 3.75,
+        "z": 0.24,
+        "tag_centre": [
+          0.37,
+          3.75,
+          0.24
+        ],
+        "tag_normal": [
+          1.0,
+          -0.0,
+          0.0
+        ],
+        "tag_centre_in_spawn_frame": [
+          -0.25,
+          3.37,
+          0.24
+        ],
+        "readable_with_0p30_clearance": true,
+        "readable_area_m2": 2.89,
+        "max_read_range_m": 2.65,
+        "note": "back of the 1 m pocket cut into the divider (right arm tip)"
+      },
+      {
+        "id": 7,
+        "x": 4.0,
+        "y": 4.69,
+        "z": 0.24,
+        "tag_centre": [
+          4.0,
+          4.63,
+          0.24
+        ],
+        "tag_normal": [
+          -0.0,
+          -1.0,
+          0.0
+        ],
+        "tag_centre_in_spawn_frame": [
+          -1.129,
+          7.0,
+          0.24
+        ],
+        "readable_with_0p30_clearance": true,
+        "readable_area_m2": 3.16,
+        "max_read_range_m": 2.38,
+        "note": "far tip of the right arm = end of the horseshoe"
+      }
+    ],
+    "robot_centre_floor_m2_by_clearance": {
+      "0.22": 56.1,
+      "0.30": 50.29,
+      "0.35": 46.42,
+      "0.39": 42.73,
+      "0.45": 37.34
+    },
+    "markers_readable_by_clearance": {
+      "0.30": [
+        0,
+        2,
+        42,
+        7
+      ],
+      "0.35": [
+        0,
+        2,
+        42,
+        7
+      ],
+      "0.39": [
+        0,
+        2,
+        42,
+        7
+      ],
+      "0.45": [
+        0,
+        2,
+        42,
+        7
+      ]
+    }
+  },
+  "marker_gauntlet": {
+    "spawn": {
+      "x": -4.25,
+      "y": 4.25,
+      "yaw": 0.0
+    },
+    "reachable_m2": 51.6,
+    "stranded_m2": 0.0,
+    "markers": [
+      {
+        "id": 2,
+        "x": -4.69,
+        "y": -0.75,
+        "z": 0.9,
+        "tag_centre": [
+          -4.63,
+          -0.75,
+          0.9
+        ],
+        "tag_normal": [
+          1.0,
+          -0.0,
+          0.0
+        ],
+        "tag_centre_in_spawn_frame": [
+          -0.38,
+          -5.0,
+          0.9
+        ],
+        "readable_with_0p30_clearance": true,
+        "readable_area_m2": 0.39,
+        "max_read_range_m": 2.33,
+        "note": "HIGH: 0.9 m up a 1 m post on the side wall of a 2.5 m wide room"
+      },
+      {
+        "id": 42,
+        "x": 0.0,
+        "y": 2.81,
+        "z": 0.24,
+        "tag_centre": [
+          -0.0,
+          2.87,
+          0.24
+        ],
+        "tag_normal": [
+          -0.0,
+          1.0,
+          0.0
+        ],
+        "tag_centre_in_spawn_frame": [
+          4.25,
+          -1.38,
+          0.24
+        ],
+        "readable_with_0p30_clearance": true,
+        "readable_area_m2": 0.36,
+        "max_read_range_m": 1.67,
+        "note": "RECESSED: back of a 0.4 m wide, 1 m deep slot the robot cannot enter"
+      },
+      {
+        "id": 7,
+        "x": -4.0,
+        "y": 2.19,
+        "z": 0.24,
+        "tag_centre": [
+          -4.0,
+          2.13,
+          0.24
+        ],
+        "tag_normal": [
+          -0.0,
+          -1.0,
+          0.0
+        ],
+        "tag_centre_in_spawn_frame": [
+          0.25,
+          -2.12,
+          0.24
+        ],
+        "readable_with_0p30_clearance": true,
+        "readable_area_m2": 3.77,
+        "max_read_range_m": 2.63,
+        "note": "BEHIND YOU: beside the north door of room A, facing into the room"
+      },
+      {
+        "id": 13,
+        "x": -0.75,
+        "y": -1.69,
+        "z": 0.24,
+        "tag_centre": [
+          -0.75,
+          -1.629,
+          0.24
+        ],
+        "tag_normal": [
+          -0.0,
+          1.0,
+          0.0
+        ],
+        "tag_centre_in_spawn_frame": [
+          3.5,
+          -5.88,
+          0.24
+        ],
+        "readable_with_0p30_clearance": true,
+        "readable_area_m2": 2.1,
+        "max_read_range_m": 2.48,
+        "note": "OCCLUDED: pillar in front, hidden from a band straight ahead of it"
+      },
+      {
+        "id": 21,
+        "x": 1.19,
+        "y": 0.9,
+        "z": 0.24,
+        "tag_centre": [
+          1.129,
+          0.9,
+          0.24
+        ],
+        "tag_normal": [
+          -1.0,
+          0.0,
+          0.0
+        ],
+        "tag_centre_in_spawn_frame": [
+          5.38,
+          -3.35,
+          0.24
+        ],
+        "readable_with_0p30_clearance": true,
+        "readable_area_m2": 4.81,
+        "max_read_range_m": 2.63,
+        "note": "PAIR (left): two different IDs 14 cm apart"
+      },
+      {
+        "id": 22,
+        "x": 1.19,
+        "y": 0.76,
+        "z": 0.24,
+        "tag_centre": [
+          1.129,
+          0.76,
+          0.24
+        ],
+        "tag_normal": [
+          -1.0,
+          0.0,
+          0.0
+        ],
+        "tag_centre_in_spawn_frame": [
+          5.38,
+          -3.49,
+          0.24
+        ],
+        "readable_with_0p30_clearance": true,
+        "readable_area_m2": 4.97,
+        "max_read_range_m": 2.63,
+        "note": "PAIR (right)"
+      },
+      {
+        "id": 64,
+        "x": 3.25,
+        "y": 0.25,
+        "z": 0.45,
+        "tag_centre": [
+          3.404,
+          0.506,
+          0.392
+        ],
+        "tag_normal": [
+          -0.0,
+          -0.707,
+          0.707
+        ],
+        "tag_centre_in_spawn_frame": [
+          7.654,
+          -3.744,
+          0.392
+        ],
+        "readable_with_0p30_clearance": true,
+        "readable_area_m2": 0.72,
+        "max_read_range_m": 2.09,
+        "note": "TILTED: 0.5 m post leaning back 45 deg, tag faces half-up and is rotated 20 deg in its own plane"
+      },
+      {
+        "id": 0,
+        "x": -2.5,
+        "y": -4.69,
+        "z": 0.24,
+        "tag_centre": [
+          -2.5,
+          -4.63,
+          0.24
+        ],
+        "tag_normal": [
+          -0.0,
+          1.0,
+          0.0
+        ],
+        "tag_centre_in_spawn_frame": [
+          1.75,
+          -8.88,
+          0.24
+        ],
+        "readable_with_0p30_clearance": true,
+        "readable_area_m2": 3.14,
+        "max_read_range_m": 2.07,
+        "note": "GRAZING: flat on the side wall of a 2 m wide corridor"
+      }
+    ],
+    "robot_centre_floor_m2_by_clearance": {
+      "0.22": 51.6,
+      "0.30": 44.68,
+      "0.35": 40.0,
+      "0.39": 35.52,
+      "0.45": 28.87
+    },
+    "markers_readable_by_clearance": {
+      "0.30": [
+        2,
+        42,
+        7,
+        13,
+        21,
+        22,
+        64,
+        0
+      ],
+      "0.35": [
+        2,
+        42,
+        7,
+        13,
+        21,
+        22,
+        64,
+        0
+      ],
+      "0.39": [
+        2,
+        42,
+        7,
+        13,
+        21,
+        22,
+        64,
+        0
+      ],
+      "0.45": [
+        2,
+        42,
+        7,
+        13,
+        21,
+        22,
+        64,
+        0
+      ]
+    }
+  },
+  "slam_stress": {
+    "spawn": {
+      "x": -4.0,
+      "y": 3.25,
+      "yaw": 0.0
+    },
+    "reachable_m2": 53.27,
+    "stranded_m2": 0.0,
+    "markers": [
+      {
+        "id": 0,
+        "x": 2.0,
+        "y": 4.69,
+        "z": 0.24,
+        "tag_centre": [
+          2.0,
+          4.63,
+          0.24
+        ],
+        "tag_normal": [
+          -0.0,
+          -1.0,
+          0.0
+        ],
+        "tag_centre_in_spawn_frame": [
+          6.0,
+          1.38,
+          0.24
+        ],
+        "readable_with_0p30_clearance": true,
+        "readable_area_m2": 2.67,
+        "max_read_range_m": 2.6,
+        "note": "back wall of the 4th of five identical bays"
+      },
+      {
+        "id": 2,
+        "x": 4.0,
+        "y": 0.81,
+        "z": 0.24,
+        "tag_centre": [
+          4.0,
+          0.871,
+          0.24
+        ],
+        "tag_normal": [
+          -0.0,
+          1.0,
+          0.0
+        ],
+        "tag_centre_in_spawn_frame": [
+          8.0,
+          -2.38,
+          0.24
+        ],
+        "readable_with_0p30_clearance": true,
+        "readable_area_m2": 1.13,
+        "max_read_range_m": 1.53,
+        "note": "inside the closet, behind the 0.75 m doorway"
+      },
+      {
+        "id": 42,
+        "x": 4.69,
+        "y": -4.25,
+        "z": 0.24,
+        "tag_centre": [
+          4.63,
+          -4.25,
+          0.24
+        ],
+        "tag_normal": [
+          -1.0,
+          0.0,
+          0.0
+        ],
+        "tag_centre_in_spawn_frame": [
+          8.63,
+          -7.5,
+          0.24
+        ],
+        "readable_with_0p30_clearance": true,
+        "readable_area_m2": 1.6,
+        "max_read_range_m": 2.63,
+        "note": "east end of the 9.5 m featureless corridor"
+      },
+      {
+        "id": 7,
+        "x": -2.3,
+        "y": -1.3,
+        "z": 0.24,
+        "tag_centre": [
+          -2.361,
+          -1.3,
+          0.24
+        ],
+        "tag_normal": [
+          -1.0,
+          0.0,
+          0.0
+        ],
+        "tag_centre_in_spawn_frame": [
+          1.64,
+          -4.55,
+          0.24
+        ],
+        "readable_with_0p30_clearance": true,
+        "readable_area_m2": 3.71,
+        "max_read_range_m": 2.4,
+        "note": "free-standing post among the pillars, faces west"
+      }
+    ],
+    "robot_centre_floor_m2_by_clearance": {
+      "0.22": 53.27,
+      "0.30": 44.4,
+      "0.35": 38.21,
+      "0.39": 31.8,
+      "0.45": 23.61
+    },
+    "markers_readable_by_clearance": {
+      "0.30": [
+        0,
+        2,
+        42,
+        7
+      ],
+      "0.35": [
+        0,
+        2,
+        42,
+        7
+      ],
+      "0.39": [
+        0,
+        42,
+        7
+      ],
+      "0.45": [
+        0,
+        42,
+        7
+      ]
+    }
+  }
+}
