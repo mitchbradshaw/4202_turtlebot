@@ -142,3 +142,43 @@ class MapMarkersNode(Node):
             self.detected_markers[marker_id] = new_position
         else:
             self.detected_markers[marker_id] = position
+
+    def place_marker(self):
+
+        out = MarkerDetectionArray()
+
+        for marker_id, mk in self.markers.items():
+            mkr = self.detected_markers()
+            mkr.header.frame_id = self.map_frame
+            mkr.id = marker_id
+            mkr.type = self.detected_markers.SPHERE
+            mkr.pose.position.x = self.detected_markers.p.x
+            mkr.pose.position.y = self.detected_markers.p.z
+            mkr.pose.position.z = 0
+            mkr.scale.x = 0.1
+            mkr.scale.y = 0.1
+            mkr.scale.z = 0.1
+            mkr.colour.r = 0
+            mkr.colour.g = 1
+            mkr.colour.b = 0
+            mkr.colour.a = 1.0
+            out.markers.append(mkr)
+
+        self.rviz_pub.publish(out)
+
+ 
+def main(args=None):
+    rclpy.init(args=args)
+    node = MapMarkersNode()
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        node.destroy_node()
+        if rclpy.ok():
+            rclpy.shutdown()
+ 
+ 
+if __name__ == '__main__':
+    main()
