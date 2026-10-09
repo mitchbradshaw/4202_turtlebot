@@ -2,13 +2,7 @@
 explorer_node.py
 
 The single ROS node for autonomous frontier exploration. It talks to ROS on both
-ends and delegates all the actual computation to three pure logic modules:
-
-    /map  ->  frontier_detection.find_frontiers
-          ->  waypoint_finder.find_waypoints
-          ->  (tf2: look up robot pose)
-          ->  waypoint_decider.choose
-          ->  /goal_pose
+ends and delegates all the actual computation.
 
 The node owns all state (latest map, robot pose lookup, blacklist, "are we
 navigating?"). The logic modules are stateless and receive that state as
@@ -43,21 +37,20 @@ class FrontierExplorer(Node):
         super().__init__('frontier_explorer')
 
         # We run against a simulator that publishes /clock, so the node must use
-        # sim time or tf2 lookups will silently fail. (You can also pass this at
-        # launch with -p use_sim_time:=true.)
+        # sim time or tf2 lookups will silently fail. 
         self.set_parameters([
             Parameter('use_sim_time', Parameter.Type.BOOL, True)
         ])
 
         # ---- tuning knobs ----
-        self.sensor_range_m = 3.5      # LDS-01 lidar range on the Waffle Pi
+        self.sensor_range_m = 3.5      # [m] LDS-01 lidar range on the Waffle Pi
         self.a = 1.0                   # utility weight on information gain
         self.b = 200.0                 # utility weight on travel cost
         self.goal_reached_dist = 0.5   # [m] robot this close to goal counts as reached
 
         # ---- state (owned by the node) ----
         self.latest_map = None         # most recent OccupancyGrid
-        self.current_goal = None       # (x, y) we are currently driving to
+        self.current_goal = None       # (x, y) position we are currently driving to
         self.navigating = False        # are we mid-navigation right now?
         self.blacklist = []            # (x, y) goals that failed
 
@@ -77,45 +70,38 @@ class FrontierExplorer(Node):
 
         self.get_logger().info('Frontier explorer started.')
 
-    # ---- /map: keep the latest map; kick off the first goal -----------------
+    # ---- /map: upstaes latest map, if idle we start ecploring -----------------
 
     def map_callback(self, msg):
         self.latest_map = msg
 
-        # If we are idle (e.g. just after startup), start exploring. Once we are
-        # navigating, further map updates just refresh self.latest_map.
         if not self.navigating:
             self.plan_and_send_goal()
 
-    # ---- /behavior_tree_log: navigation finished -> plan the next goal -------
+    # ---- /behavior_tree_log: when navigation finished -> plan the next goal -------
 
     def bt_log_callback(self, msg):
         for event in msg.event_log:
-            # NavigateRecovery is the root of the default Nav2 BT in Humble. When
-            # it returns to IDLE the current navigation has ended (success OR
-            # give-up). If goals stop chaining, confirm this node name against
-            # your own behaviour-tree XML.
-            if event.node_name == 'NavigateRecovery' and \
-               event.current_status == 'IDLE':
+            if event.node_name == 'NavigateRecovery' and event.current_status == 'IDLE':
                 self.on_navigation_finished()
 
     def on_navigation_finished(self):
-        # bt_log IDLE fires for both success and failure, so tell them apart by
-        # how close the robot ended up to the goal. Stopped far away = the goal
-        # was unreachable, so blacklist it.
+        
+        # Check if robot reached goal, and start planning next goal
         if self.current_goal is not None:
             robot = self.lookup_robot_pose()
+            
             if robot is not None:
                 robot_x, robot_y = robot
-                g_x, g_y = self.current_goal
-                dist = math.sqrt((g_x - robot_x) ** 2 + (g_y - robot_y) ** 2)
+                goal_x, goal_y = self.current_goal
+                dist = math.sqrt((goal_x - robot_x) ** 2 + (goal_y - robot_y) ** 2)
+
                 if dist > self.goal_reached_dist:
                     self.blacklist.append(self.current_goal)
                     self.get_logger().info(
                         f'Goal failed, blacklisted: {self.current_goal}')
 
         self.navigating = False
-        self.blacklist.append(self.current_goal)
         self.plan_and_send_goal()
 
     # ---- the core: frontiers -> finder -> decider -> goal -------------------
@@ -128,13 +114,13 @@ class FrontierExplorer(Node):
         info = msg.info
         data = msg.data
 
-        # 1) Detect frontier cells (pure logic module).
+        # 1: Detect frontier cells (pure logic module).
         frontier_cells = find_frontiers(data, info.width, info.height)
         if not frontier_cells:
             self.get_logger().info('No frontiers left — exploration complete.')
             return
 
-        # 2) Size knobs derived from map resolution + sensor range.
+        # 2: Size knobs derived from map resolution + sensor range.
         resolution = info.resolution
         sensor_radius_cells = int(round(self.sensor_range_m / resolution))
         max_cluster_size = int(round((0.5 * self.sensor_range_m) / resolution))
@@ -149,14 +135,14 @@ class FrontierExplorer(Node):
             self.get_logger().info('No usable waypoints this cycle.')
             return
 
-        # 3) Where is the robot right now?
+        # 3: Where is the robot right now?
         robot = self.lookup_robot_pose()
         if robot is None:
             self.get_logger().warn('No robot pose yet — will retry next map.')
             return
         robot_x, robot_y = robot
 
-        # 4) Score candidates and pick the best.
+        # 4: Score candidates and pick the best.
         decider = WaypointDecider(a=self.a, b=self.b)
         best, utility = decider.choose(
             waypoints, robot_x, robot_y, self.blacklist)
