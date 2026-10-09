@@ -47,6 +47,8 @@ class MapMarkersNode(Node):
  
         # Initialize marker storage: marker id -> position in the map
         self.detected_markers = {}
+        # marker id -> how many detections have been averaged
+        self.detection_counts = {}
  
         #Transform stuff, initialises buffer for transform storage and the listener fills it
         self.tf_buffer = Buffer()
@@ -106,14 +108,27 @@ class MapMarkersNode(Node):
     def update_markers(self, marker_id, position):
         """
         Update the detected markers with new positions.
-        If the marker is already detected, average the new position with the old one.
+        Average all detections with a running mean.
         """
-        if marker_id in self.detected_markers:
-            old_position = self.detected_markers[marker_id]
-            new_position = (old_position + position) / 2
-            self.detected_markers[marker_id] = new_position
+        n = self.detection_counts.get(marker_id, 0)
+
+        # markers seen more than 5 times have worse estimates removed
+        if n >= 5:
+             dist = float(np.linalg.norm(position[:2] - self.detected_markers[marker_id][:2]))
+             # ignore sightings of a marker from > 1m away
+             if dist > 1.0:
+                  self.get_logger().warn(
+                       f'marker {marker_id}: ignoring outlier {dist:.1f} m from estimate',
+                       throttle_duration_sec=2.0)
+                  return 
+
+        if n == 0:
+             self.detected_markers[marker_id] = position
         else:
-            self.detected_markers[marker_id] = position
+             # running mean
+             old = self.detected_markers[marker_id]
+             self.detected_markers[marker_id] = old + (position - old) / (n+1)
+             self.detection_counts[marker_id] = n + 1
 
         p = self.detected_markers[marker_id]
         # log marker changes to terminal, throttle prevents flooding
