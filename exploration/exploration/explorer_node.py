@@ -52,7 +52,7 @@ class FrontierExplorer(Node):
         # ---- tuning knobs ----
         self.sensor_range_m = 3.5      # LDS-01 lidar range on the Waffle Pi
         self.a = 1.0                   # utility weight on information gain
-        self.b = 200.0                  # utility weight on travel cost
+        self.b = 200.0                 # utility weight on travel cost
         self.goal_reached_dist = 0.5   # [m] robot this close to goal counts as reached
 
         # ---- state (owned by the node) ----
@@ -115,6 +115,7 @@ class FrontierExplorer(Node):
                         f'Goal failed, blacklisted: {self.current_goal}')
 
         self.navigating = False
+        self.blacklist.append(self.current_goal)
         self.plan_and_send_goal()
 
     # ---- the core: frontiers -> finder -> decider -> goal -------------------
