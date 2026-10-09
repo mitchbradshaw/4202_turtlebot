@@ -30,7 +30,7 @@ setup(
     entry_points={
         'console_scripts': [
             'camera_node = mapping_pkg.camera_node:main',
-            'map_markers = mapping_pkg.map_markers:main',
-        ],
+            'map_markers_node = mapping_pkg.map_markers:main',
+            ],
     },
 )

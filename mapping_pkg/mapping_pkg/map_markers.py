@@ -18,119 +18,89 @@ import numpy as np
 import rclpy
 from rclpy.duration import Duration
 from rclpy.node import Node
-from rclpy.node import Time 
-
-#i don't think we need these since we are getting the msg from camera_node
-from rclpy.qos import qos_profile_sensor_data
-from cv_bridge import CvBridge
-from sensor_msgs.msg import CameraInfo, CompressedImage, Image
-from mapping_pkg import aruco_core
-
+from rclpy.time import Time
+ 
 #detection from camera node
 from mapping_interfaces.msg import MarkerDetectionArray
-
+ 
 #tf2 imports
 from tf2_ros import TransformException
 from tf2_ros.buffer import Buffer
 from tf2_ros.transform_listener import TransformListener
 from geometry_msgs.msg import PointStamped
 from tf2_geometry_msgs import do_transform_point
-
+ 
+#rviz display
+from visualization_msgs.msg import Marker, MarkerArray
+ 
 MAX_RANGE = 2
-
+ 
+ 
 class MapMarkersNode(Node):
-    
+ 
     def __init__(self):
         super().__init__('map_markers_node')
-
-
+ 
         # ---- ROS Parameter ----------------------------------------------
-        #needs SLAM running
+        #needs SLAM running; to test without SLAM use map_frame:=odom
         self.map_frame = self.declare_parameter('map_frame', 'map').value
-
-        # ---- Parameters -------------------------------------------------
-        self.declare_parameter('marker_size', aruco_core.DEFAULT_MARKER_SIZE_M)
-        self.declare_parameter('aruco_dictionary', aruco_core.DEFAULT_DICTIONARY)
-        self.declare_parameter('image_topic', '/camera/image_raw')
-        self.declare_parameter('camera_info_topic', '/camera/camera_info')
-        self.declare_parameter('use_compressed', False)
-        self.declare_parameter('debug_image_topic', '/aruco/debug_image')
-
-        self.marker_size = float(self.get_parameter('marker_size').value)
-        self.dictionary_name = self.get_parameter('aruco_dictionary').value
-        self.image_topic = self.get_parameter('image_topic').value
-        self.camera_info_topic = self.get_parameter('camera_info_topic').value
-        self.use_compressed = self.get_parameter('use_compressed').value
-        self.debug_image_topic = self.get_parameter('debug_image_topic').value
-
-        # Initialize CvBridge
-        self.bridge = CvBridge()
-
-        # Initialize marker storage
+ 
+        # Initialize marker storage: marker id -> position in the map
         self.detected_markers = {}
-
+ 
         #Transform stuff, initialises buffer for transform storage and the listener fills it
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self, spin_thread=True)
-
-        #subscriber for the camera node output, queue of 10 
+ 
+        #subscriber for the camera node output, queue of 10
         self.create_subscription(MarkerDetectionArray, '/aruco/detections', self.get_detected_markers, 10)
-       
-
-
+ 
+        #publisher for RViz, add a MarkerArray display on this topic
+        self.rviz_pub = self.create_publisher(MarkerArray, '/aruco/map_markers', 10)
+ 
     #assigns map positions to aruco marker
     def get_detected_markers(self, msg):
-        # maybe use a minimum distance or pixel area to filter out bad reads
-
-        in_range = []
         from_frame = msg.header.frame_id
-        to_frame = self.map_frame 
+        to_frame = self.map_frame
         frame_time = Time.from_msg(msg.header.stamp)
-
-        if not msg.markers:
-                    return 
-
-        #Checks range of marker detection, bigger will have larger error
-        for m in msg.markers:
-
-            if m.range_m <= MAX_RANGE:
-            
-                in_range.append(m)
-
-            else:
-                return
-            
-        
-        try: 
-            # this gets the position of the camera when detection was made
-            transform = self.tf_buffer.lookup_transform(
-                        to_frame, 
-                        from_frame, 
-                        frame_time,
-                        timeout=Duration(seconds=0.1))
-
-        # just error message
-        except TransformException as ex:
-            self.get_logger().info(
-                f'Could not transform {to_frame} to {from_frame} : {ex}')
+ 
+        #Checks range of marker detection, bigger will have larger error.
+        #Keeps the close markers and skips the far ones.
+        in_range = [m for m in msg.markers if m.range_m <= MAX_RANGE]
+        if not in_range:
             return
-
-        for mkr in msg.markers:
-
+ 
+        try:
+            # this gets the position of the camera when detection was made
+                        transform = self.tf_buffer.lookup_transform_full(
+                        target_frame=to_frame,           # map ...
+                        target_time=Time(),              # ... using the latest SLAM correction
+                        source_frame=from_frame,         # camera ...
+                        source_time=frame_time,          # ... where it was when the image was taken
+                        fixed_frame='odom')
+        # just error message, at most once every 2 s so it doesn't flood the terminal
+        except TransformException as ex:
+            self.get_logger().warn(
+                f'Could not transform {from_frame} to {to_frame} : {ex}')
+            return
+ 
+        for mkr in in_range:
+ 
             cameraPoint = PointStamped()
-
+ 
             cameraPoint.header = msg.header
-            cameraPoint.point = msg.position
-
+            cameraPoint.point = mkr.position
+ 
             # camera to map transform
             mapPoint_stamped = do_transform_point(cameraPoint, transform)
-
+ 
             # x, y and z
-            p = mapPoint_stamped
-
+            p = mapPoint_stamped.point
+ 
             self.update_markers(mkr.id, np.array([p.x, p.y, p.z]))
-    
-    
+ 
+        self.place_marker()
+ 
     def update_markers(self, marker_id, position):
         """
         Update the detected markers with new positions.
@@ -142,30 +112,31 @@ class MapMarkersNode(Node):
             self.detected_markers[marker_id] = new_position
         else:
             self.detected_markers[marker_id] = position
-
+ 
+    #publishes a green sphere for every marker so RViz can show them on the map
     def place_marker(self):
-
-        out = MarkerDetectionArray()
-
-        for marker_id, mk in self.markers.items():
-            mkr = self.detected_markers()
+ 
+        out = MarkerArray()
+ 
+        for marker_id, position in self.detected_markers.items():
+            mkr = Marker()
             mkr.header.frame_id = self.map_frame
             mkr.id = marker_id
-            mkr.type = self.detected_markers.SPHERE
-            mkr.pose.position.x = self.detected_markers.p.x
-            mkr.pose.position.y = self.detected_markers.p.z
-            mkr.pose.position.z = 0
+            mkr.type = Marker.SPHERE
+            mkr.pose.position.x = float(position[0])
+            mkr.pose.position.y = float(position[1])
+            mkr.pose.position.z = 0.0          
             mkr.scale.x = 0.1
             mkr.scale.y = 0.1
             mkr.scale.z = 0.1
-            mkr.colour.r = 0
-            mkr.colour.g = 1
-            mkr.colour.b = 0
-            mkr.colour.a = 1.0
+            mkr.color.r = 0.0
+            mkr.color.g = 1.0
+            mkr.color.b = 0.0
+            mkr.color.a = 1.0
             out.markers.append(mkr)
-
+ 
         self.rviz_pub.publish(out)
-
+ 
  
 def main(args=None):
     rclpy.init(args=args)
