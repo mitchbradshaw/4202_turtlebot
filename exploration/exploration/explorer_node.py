@@ -99,7 +99,7 @@ class FrontierExplorer(Node):
 
             # either way, blacklist goal       
             self.blacklist.append(self.current_goal)
-            
+
         self.navigating = False
         self.plan_and_send_goal()
 
@@ -161,8 +161,18 @@ class FrontierExplorer(Node):
         best, utility = decider.choose(
             waypoints, robot_x, robot_y, self.blacklist)
 
+        if best is None and self.blacklist:
+            # Every candidate sits inside a blacklist circle. The list is only a
+            # hint, so wipe it and re-score; truly bad goals will fail again.
+            self.get_logger().warn(
+                f'All {len(waypoints)} waypoints blacklisted — clearing '
+                f'{len(self.blacklist)} entries and retrying.')
+            self.blacklist = []
+            best, utility = decider.choose(
+                waypoints, robot_x, robot_y, self.blacklist)
+
         if best is None:
-            self.get_logger().info('All waypoints blacklisted — nothing to do.')
+            self.get_logger().info('No usable waypoint after clearing blacklist — nothing to do.')
             return
 
         self.get_logger().info(

@@ -73,6 +73,9 @@ class WaypointFinder:
 
             # One representative cell for the whole cluster.
             cell = self._cluster_waypoint(cluster)
+            # step back a little from frontier so goal is accepted by Nav2
+            # -> goals near wall perimeters are skipped or skew paths
+            cell = self._pull_back_from_frontier(data, width, height, cell)
             w_row, w_col = cell
 
             # How much unknown space would we likely reveal from here?
@@ -161,6 +164,50 @@ class WaypointFinder:
                 best_cell = (row, col)
 
         return best_cell
+
+    # ---- step 2b: nudge waypoint from frontier into open space
+    def _pull_back_from_frontier(self, data, width, height, cell, max_radius=4):
+        """
+        Search outward from `cell` in square rings of radius 1 -> max_radius for
+        the nearest FREE cell whose full 3x3 neighbourhood is also FREE.
+        That cell is at least one cell away from any wall or unknown, which at
+        0.05 m/cell pulls the goal roughly 0.1-0.2 m back from the frontier.
+        Returns the original cell if nothing better is found.
+        """
+
+        # check if adjacent 3x3 cells are free
+        def is_clear(row, col):
+            for d_row in (-1, 0, 1):
+                for d_col in (-1, 0, 1):
+                    n_row = row + d_row
+                    n_col = col + d_col
+                    if n_row < 0 or n_row >= height or n_col < 0 or n_col >= width:
+                        return False
+                    if data[n_row * width + n_col] != 0:     # 0 = FREE
+                        return False
+            return True
+
+        c_row, c_col = cell
+        for r in range(1, max_radius + 1):
+            best = None
+            best_dist_sq = None
+            for d_row in range(-r, r + 1):
+                for d_col in range(-r, r + 1):
+                    # Only the ring at radius r, not the filled square.
+                    if max(abs(d_row), abs(d_col)) != r:
+                        continue
+                    row = c_row + d_row
+                    col = c_col + d_col
+                    if not is_clear(row, col):
+                        continue
+                    dist_sq = d_row * d_row + d_col * d_col
+                    if best_dist_sq is None or dist_sq < best_dist_sq:
+                        best_dist_sq = dist_sq
+                        best = (row,col)
+            if best is not None:
+                return best
+        # if no better option is found
+        return cell
 
     # ---- step 3: info gain = unknown cells inside the sensor disk ------------
 
