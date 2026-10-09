@@ -22,7 +22,10 @@ def generate_launch_description():
         DeclareLaunchArgument('marker_size', default_value='0.1',
                               description='Black-square side length in metres (0.1 from world SDF)'),
         DeclareLaunchArgument('aruco_dictionary', default_value='DICT_6X6_1000'),
+        DeclareLaunchArgument('map_frame', default_value='map', description='Frame to pin the \
+                              markers inside, use odom to test without SLAM'),
     ]
+
 
     camera_node = Node(
         package='mapping_pkg',
@@ -42,4 +45,15 @@ def generate_launch_description():
         }],
     )
 
-    return LaunchDescription(args + [camera_node])
+    map_markers_node = Node(
+        package='mapping_pkg',
+        executable='map_markers_node',
+        name='map_markers_node',
+        output='screen',
+        parameters=[{
+            'use_sim_time': ParameterValue(LaunchConfiguration('use_sim_time'), value_type=bool),
+            'map_frame': LaunchConfiguration('map_frame'),
+            }],
+    )
+
+    return LaunchDescription(args + [camera_node, map_markers_node])
