@@ -23,7 +23,7 @@ class WaypointDecider:
                  a,
                  b,
                  blacklist_radius=0.5,
-                 min_travel_dist=0.3,
+                 min_travel_dist=0.5,
                  close_penalty=1000.0):
         self.a = a                                # weight on information gain
         self.b = b                                # weight on travel cost
@@ -49,6 +49,10 @@ class WaypointDecider:
                 continue
 
             cost = self._distance(robot_x, robot_y, wp.x, wp.y)
+            # hard skip goals that are too close
+            if cost < self.min_travel_dist:
+                continue
+            
             penalty = self._penalty(cost)
 
             utility = self.a * wp.gain - self.b * cost - penalty

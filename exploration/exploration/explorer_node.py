@@ -94,10 +94,12 @@ class FrontierExplorer(Node):
                 dist = math.sqrt((goal_x - robot_x) ** 2 + (goal_y - robot_y) ** 2)
 
                 if dist > self.goal_reached_dist:
-                    self.blacklist.append(self.current_goal)
                     self.get_logger().info(
                         f'Goal failed, blacklisted: {self.current_goal}')
 
+            # either way, blacklist goal       
+            self.blacklist.append(self.current_goal)
+            
         self.navigating = False
         self.plan_and_send_goal()
 
