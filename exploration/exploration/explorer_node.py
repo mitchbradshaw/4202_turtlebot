@@ -17,7 +17,6 @@ import math
 
 import rclpy
 from rclpy.node import Node
-from rclpy.parameter import Parameter
 
 from nav_msgs.msg import OccupancyGrid
 from geometry_msgs.msg import PoseStamped
@@ -35,12 +34,6 @@ class FrontierExplorer(Node):
 
     def __init__(self):
         super().__init__('frontier_explorer')
-
-        # We run against a simulator that publishes /clock, so the node must use
-        # sim time or tf2 lookups will silently fail. 
-        self.set_parameters([
-            Parameter('use_sim_time', Parameter.Type.BOOL, True)
-        ])
 
         # ---- tuning knobs ----
         self.sensor_range_m = 3.5      # [m] LDS-01 lidar range on the Waffle Pi
