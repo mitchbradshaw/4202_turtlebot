@@ -47,6 +47,10 @@ class FrontierExplorer(Node):
         self.navigating = False        # are we mid-navigation right now?
         self.blacklist = []            # (x, y) goals that failed
 
+        self.goal_timeout_s = 60.0     # max time to spend on one goal
+        self.goal_sent_time = None     # time to when goal was published
+        self.create_timer(1.0, self.check_timeout)
+        
         # ---- tf2 for robot pose lookup (map -> base_link) ----
         self.tf_buffer = tf2_ros.Buffer()
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self)
@@ -96,6 +100,21 @@ class FrontierExplorer(Node):
 
         self.navigating = False
         self.plan_and_send_goal()
+
+    def check_timeout(self):
+        # see how long a goal has been a target
+        if not self.navigating or self.goal_sent_time is None:
+            return
+        elapsed = (self.get_clock().now() - self.goal_sent_time).nanoseconds * 1e-9
+        
+        # remove goals that timeout
+        if elapsed > self.goal_timeout_s:
+            self.get_logger().warn(
+                f'Goal {self.current_goal} timed out after {elapsed:.0f}s, blacklisting')
+            self.blacklist.append(self.current_goal)
+            self.navigating = False
+            self.goal_sent_time = None
+            self.plan_and_send_goal()
 
     # ---- the core: frontiers -> finder -> decider -> goal -------------------
 
@@ -152,6 +171,7 @@ class FrontierExplorer(Node):
         self.publish_goal(best.x, best.y)
         self.current_goal = (best.x, best.y)
         self.navigating = True
+        self.goal_sent_time = self.get_clock().now()
 
     # ---- helpers ------------------------------------------------------------
 
