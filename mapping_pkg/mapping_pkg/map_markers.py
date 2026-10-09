@@ -57,6 +57,8 @@ class MapMarkersNode(Node):
  
         #publisher for RViz, add a MarkerArray display on this topic
         self.rviz_pub = self.create_publisher(MarkerArray, '/aruco/map_markers', 10)
+        self.declare_parameter('output_file','/tmp/aruco_markers.csv')
+        self.create_timer(5.0, self.write_report)
  
     #assigns map positions to aruco marker
     def get_detected_markers(self, msg):
@@ -112,6 +114,22 @@ class MapMarkersNode(Node):
             self.detected_markers[marker_id] = new_position
         else:
             self.detected_markers[marker_id] = position
+
+        p = self.detected_markers[marker_id]
+        # log marker changes to terminal, throttle prevents flooding
+        self.get_logger().info(
+             f'marker {marker_id}: x={p[0]:.2f} y={p[1]:.2f} (map)', 
+             throttle_duration_sec=2.0)
+
+    def write_report(self):
+         """
+         Write marker locations to csv file for verification of results
+         """
+         path = self.get_parameter('output_file').value
+         with open(path, 'w') as f:
+              f.write('id,x,y\n')
+              for marker_id, p in sorted(self.detected_markers.items()):
+                   f.write(f'{marker_id},{p[0]:.3f},{p[1]:.3f}\n')
  
     #publishes a green sphere for every marker so RViz can show them on the map
     def place_marker(self):
