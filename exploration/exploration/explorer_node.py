@@ -29,7 +29,6 @@ from exploration.frontier_detection import find_frontiers
 from exploration.waypoint_finder import WaypointFinder
 from exploration.waypoint_decider import WaypointDecider
 from exploration.path_distance import flood_distances
-from visualization_msgs.msg import Marker, MarkerArray
 
 
 class FrontierExplorer(Node):
@@ -80,16 +79,6 @@ class FrontierExplorer(Node):
         self.hold_s = 2.0              # [s] sit still after arriving so the camera gets frames
         self.hold_timer = None
 
-        # ---- marker targeting ----
-        self.pending_markers = {}      # id -> (x, y, yaw from marker toward viewer)
-        self.visited_markers = set()   # ids we have already driven to look at
-        self.marker_standoff_m = 0.8   # [m] how far in front of the marker to stand
-        self.marker_hold_s = 3.0       # [s] longer pause for markers (needs ~8 frames)
-        self.goal_kind = None          # 'frontier' or 'marker'
-        self.current_marker_id = None
-        self.create_subscription(MarkerArray, '/aruco/unconfirmed', self.unconfirmed_callback, 10)
-
-        
     # ---- /map: upstaes latest map, if idle we start ecploring -----------------
 
     def map_callback(self, msg):
@@ -109,10 +98,7 @@ class FrontierExplorer(Node):
         if self.hold_timer is not None:
             return                      # already holding; Nav2 can report IDLE twice
 
-        if self.goal_kind == 'marker':
-            self.visited_markers.add(self.current_marker_id)
-            self.get_logger().info(f'Marker {self.current_marker_id}: looked, moving on')
-        elif self.current_goal is not None:
+        if self.current_goal is not None:
             robot = self.lookup_robot_pose()
             if robot is not None:
                 robot_x, robot_y = robot
@@ -123,9 +109,8 @@ class FrontierExplorer(Node):
             self.blacklist.append(self.current_goal)
 
         # Stay "navigating" during the hold so map_callback does not plan early.
-        hold = self.marker_hold_s if self.goal_kind == 'marker' else self.hold_s
         self.goal_sent_time = None
-        self.hold_timer = self.create_timer(hold, self._hold_done)
+        self.hold_timer = self.create_timer(self.hold_s, self._hold_done)
 
     def _hold_done(self):
         self.destroy_timer(self.hold_timer)
@@ -141,14 +126,9 @@ class FrontierExplorer(Node):
         
         # remove goals that timeout
         if elapsed > self.goal_timeout_s:
-            if self.goal_kind == 'marker':
-                self.get_logger().warn(
-                    f'Marker {self.current_marker_id}: viewpoint unreachable, skipping')
-                self.visited_markers.add(self.current_marker_id)
-            else:
-                self.get_logger().warn(
-                    f'Goal {self.current_goal} timed out after {elapsed:.0f}s, blacklisting')
-                self.blacklist.append(self.current_goal)
+            self.get_logger().warn(
+                f'Goal {self.current_goal} timed out after {elapsed:.0f}s, blacklisting')
+            self.blacklist.append(self.current_goal)
             self.navigating = False
             self.goal_sent_time = None
             self.plan_and_send_goal()
@@ -156,20 +136,6 @@ class FrontierExplorer(Node):
     # ---- the core: frontiers -> finder -> decider -> goal -------------------
 
     def plan_and_send_goal(self):
-        # 0: an unconfirmed marker beats any frontier. Visit each one once.
-        target = self.pick_marker_target()
-        if target is not None:
-            mid, x, y, yaw = target
-            self.get_logger().info(
-                f'Marker {mid} unconfirmed, going to look from ({x:.2f}, {y:.2f})')
-            self.publish_goal(x, y, yaw)
-            self.current_goal = (x, y)
-            self.current_marker_id = mid
-            self.goal_kind = 'marker'
-            self.navigating = True
-            self.goal_sent_time = self.get_clock().now()
-            return
-        
         if self.latest_map is None:
             return
 
@@ -263,7 +229,6 @@ class FrontierExplorer(Node):
             yaw = math.atan2(best.y - robot_y, best.x - robot_x)   # face direction of travel
         self.publish_goal(best.x, best.y, yaw)
         self.current_goal = (best.x, best.y)
-        self.goal_kind = 'frontier'
         self.navigating = True
         self.goal_sent_time = self.get_clock().now()
 
@@ -331,33 +296,6 @@ class FrontierExplorer(Node):
         goal.pose.orientation.z = math.sin(yaw / 2.0)
         goal.pose.orientation.w = math.cos(yaw / 2.0)
         self.goal_pub.publish(goal)
-
-    def unconfirmed_callback(self, msg):
-        pending = {}
-        for m in msg.markers:
-            if m.action == Marker.DELETEALL:
-                continue
-            q = m.pose.orientation
-            yaw = 2.0 * math.atan2(q.z, q.w)          # inverse of z=sin(yaw/2), w=cos(yaw/2)
-            pending[m.id] = (m.pose.position.x, m.pose.position.y, yaw)
-        self.pending_markers = pending
-
-    def pick_marker_target(self):
-        """(id, x, y, yaw) for the first unvisited unconfirmed marker, else None."""
-        for mid, (mx, my, view_yaw) in sorted(self.pending_markers.items()):
-            if mid in self.visited_markers:
-                continue
-            vx = mx + self.marker_standoff_m * math.cos(view_yaw)
-            vy = my + self.marker_standoff_m * math.sin(view_yaw)
-            moved = self.nudge_to_low_cost(vx, vy)
-            if moved is None:
-                self.get_logger().warn(f'Marker {mid}: no free viewpoint, skipping')
-                self.visited_markers.add(mid)
-                continue
-            vx, vy = moved
-            face_yaw = math.atan2(my - vy, mx - vx)
-            return mid, vx, vy, face_yaw
-        return None
 
     def map_is_free(self, x, y):
         """True if /map says world (x, y) is a known free cell."""
