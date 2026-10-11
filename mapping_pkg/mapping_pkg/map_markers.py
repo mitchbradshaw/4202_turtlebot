@@ -61,6 +61,7 @@ class MapMarkersNode(Node):
  
         #publisher for RViz, add a MarkerArray display on this topic
         self.rviz_pub = self.create_publisher(MarkerArray, '/aruco/map_markers', 10)
+        # write the marker table to a csv every few seconds so we have numbers to check
         self.declare_parameter('output_file','/tmp/aruco_markers.csv')
         self.create_timer(5.0, self.write_report)
 
@@ -125,7 +126,7 @@ class MapMarkersNode(Node):
         # markers seen more than 5 times have worse estimates removed
         if n >= 5:
              dist = float(np.linalg.norm(position[:2] - self.detected_markers[marker_id][:2]))
-             # ignore sightings of a marker from > 1m away
+             # ignore a sighting more than 1 m from the current estimate
              if dist > 1.0:
                   self.get_logger().warn(
                        f'marker {marker_id}: ignoring outlier {dist:.1f} m from estimate',

@@ -6,7 +6,7 @@ ends and delegates all the actual computation.
 
 The node owns all state (latest map, robot pose lookup, blacklist, "are we
 navigating?"). The logic modules are stateless and receive that state as
-arguments — they know nothing about ROS.
+arguments, so they know nothing about ROS.
 
 Follows the Prac 4 waypoint_cycler pattern: publish a PoseStamped to /goal_pose,
 and listen to /behavior_tree_log to know when the current navigation has finished
@@ -38,10 +38,10 @@ class FrontierExplorer(Node):
         super().__init__('frontier_explorer')
 
         # ---- tuning knobs ----
-        self.sensor_range_m = 3.5      # [m] still used for cluster sizing
-        self.gain_radius_m = 1.5       # [m] unknown counted only this close to a candidate
-        self.a = 1.0                   # utility per m^2 of new map
-        self.b = 1.0                   # utility per metre of walking
+        self.sensor_range_m = 3.5      # LDS-01 lidar range on the Waffle Pi
+        self.gain_radius_m = 1.5       # only count unknown cells this close to a candidate
+        self.a = 1.0                   # utility weight on information gain
+        self.b = 1.0                   # utility weight on travel cost
         self.goal_reached_dist = 0.5   # [m] robot this close to goal counts as reached
 
         # ---- state (owned by the node) ----
@@ -62,11 +62,11 @@ class FrontierExplorer(Node):
         self.map_sub = self.create_subscription(
             OccupancyGrid, '/map', self.map_callback, 10)
 
-        # --- Nav2 occupancy grid ---
+        # Nav2's costmap, so we can keep goals out of the inflated ring around walls
         self.latest_costmap = None
         self.costmap_sub = self.create_subscription(
             OccupancyGrid, '/global_costmap/costmap', self.costmap_callback, 10)
-        self.max_goal_cost = 80        # 0..100; ~0.3 m from a wall with default inflation
+        self.max_goal_cost = 80        # 0..100, anything higher is too close to a wall
 
         self.bt_log_sub = self.create_subscription(
             BehaviorTreeLog, '/behavior_tree_log', self.bt_log_callback, 10)
@@ -180,7 +180,7 @@ class FrontierExplorer(Node):
         # 1: Detect frontier cells (pure logic module).
         frontier_cells = find_frontiers(data, info.width, info.height)
         if not frontier_cells:
-            self.get_logger().info('No frontiers left — exploration complete.')
+            self.get_logger().info('No frontiers left, exploration complete.')
             return
 
         # 2: Size knobs derived from map resolution + sensor range.
@@ -199,14 +199,14 @@ class FrontierExplorer(Node):
             self.get_logger().info('No usable waypoints this cycle.')
             return
 
-         # 2b: slide every candidate out of the inflation ring and drop hopeless ones.
+        # 2b: move each candidate out of the inflation ring, drop it if we can't
         usable = []
         for wp in waypoints:
             moved = self.nudge_to_low_cost(wp.x, wp.y)
             if moved is None:
                 continue
             wp.x, wp.y = moved
-            # keep the grid cell in step with the new x, y (6b looks cells up)
+            # keep the grid cell in step with the new x, y
             wp.col = int((wp.x - info.origin.position.x) / resolution)
             wp.row = int((wp.y - info.origin.position.y) / resolution)
             usable.append(wp)
@@ -219,7 +219,7 @@ class FrontierExplorer(Node):
         # 3: Where is the robot right now?
         robot = self.lookup_robot_pose()
         if robot is None:
-            self.get_logger().warn('No robot pose yet — will retry next map.')
+            self.get_logger().warn('No robot pose yet, will retry next map.')
             return
         robot_x, robot_y = robot
 
@@ -238,17 +238,16 @@ class FrontierExplorer(Node):
             waypoints, robot_x, robot_y, self.blacklist, path_dists)
 
         if best is None and self.blacklist:
-            # Every candidate sits inside a blacklist circle. The list is only a
-            # hint, so wipe it and re-score; truly bad goals will fail again.
+            # everything is inside a blacklist circle, so clear it and score again
             self.get_logger().warn(
-                f'All {len(waypoints)} waypoints blacklisted — clearing '
+                f'All {len(waypoints)} waypoints blacklisted, clearing '
                 f'{len(self.blacklist)} entries and retrying.')
             self.blacklist = []
             best, utility = decider.choose(
                 waypoints, robot_x, robot_y, self.blacklist, path_dists)
 
         if best is None:
-            self.get_logger().info('No usable waypoint after clearing blacklist — nothing to do.')
+            self.get_logger().info('No usable waypoint after clearing blacklist, nothing to do.')
             return
 
         # log chosen goal
@@ -316,7 +315,7 @@ class FrontierExplorer(Node):
                 if c is None or c < 0 or c > self.max_goal_cost:
                     continue
                 if not self.map_is_free(nx, ny):
-                    continue                        # flood (6b) must be able to reach it
+                    continue                        # only cells /map knows are free
                 d2 = d_row * d_row + d_col * d_col
                 if best_d2 is None or d2 < best_d2:
                     best_d2 = d2
@@ -350,7 +349,7 @@ class FrontierExplorer(Node):
                 continue
             vx = mx + self.marker_standoff_m * math.cos(view_yaw)
             vy = my + self.marker_standoff_m * math.sin(view_yaw)
-            moved = self.nudge_to_low_cost(vx, vy)     # from 6a
+            moved = self.nudge_to_low_cost(vx, vy)
             if moved is None:
                 self.get_logger().warn(f'Marker {mid}: no free viewpoint, skipping')
                 self.visited_markers.add(mid)
