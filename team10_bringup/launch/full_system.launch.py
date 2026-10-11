@@ -18,25 +18,13 @@ def generate_launch_description():
     launch_arguments={'gui': gui}.items(),
     )
 
-    nav2_launch = IncludeLaunchDescription(
+    # Nav2 + SLAM, camera and explorer all live in stack.launch.py so the same
+    # file can be used with any world and on the real robot
+    stack_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
-            FindPackageShare('turtlebot3_navigation2'), '/launch/navigation2.launch.py'
-        ]),
-        launch_arguments={'use_sim_time': use_sim_time, 'slam': 'True'}.items(),
-    )
-
-    camera_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource([
-            FindPackageShare('mapping_pkg'), '/launch/camera_only.launch.py'
+            FindPackageShare('team10_bringup'), '/launch/stack.launch.py'
         ]),
         launch_arguments={'use_sim_time': use_sim_time}.items(),
-    )
-
-    explorer_launch = IncludeLaunchDescription(
-    PythonLaunchDescriptionSource([
-        FindPackageShare('exploration'), '/launch/exploration_only.launch.py'
-    ]),
-    launch_arguments={'use_sim_time': use_sim_time}.items(),
     )
 
     return LaunchDescription([
@@ -46,9 +34,6 @@ def generate_launch_description():
         DeclareLaunchArgument('use_sim_time', default_value='True'),
 
         GroupAction([world_launch]),
-        TimerAction(period=10.0, actions=[
-            GroupAction([nav2_launch]),
-            GroupAction([camera_launch]),
-        ]),
-        TimerAction(period=20.0, actions=[GroupAction([explorer_launch])]),
+        # Gazebo needs about 10 s to spawn the robot before Nav2 can see /odom
+        TimerAction(period=10.0, actions=[GroupAction([stack_launch])]),
     ])
