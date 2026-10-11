@@ -28,7 +28,6 @@ from tf2_ros import TransformException
 from exploration.frontier_detection import find_frontiers
 from exploration.waypoint_finder import WaypointFinder
 from exploration.waypoint_decider import WaypointDecider
-from exploration.path_distance import flood_distances
 
 
 class FrontierExplorer(Node):
@@ -172,9 +171,6 @@ class FrontierExplorer(Node):
             if moved is None:
                 continue
             wp.x, wp.y = moved
-            # keep the grid cell in step with the new x, y
-            wp.col = int((wp.x - info.origin.position.x) / resolution)
-            wp.row = int((wp.y - info.origin.position.y) / resolution)
             usable.append(wp)
         if not usable:
             self.get_logger().info('All waypoints inside the inflation ring this cycle.')
@@ -189,19 +185,10 @@ class FrontierExplorer(Node):
             return
         robot_x, robot_y = robot
 
-        # 3b: walking distance from the robot to every free cell.
-        r_col = int((robot_x - info.origin.position.x) / resolution)
-        r_row = int((robot_y - info.origin.position.y) / resolution)
-        path_dists = flood_distances(data, info.width, info.height, resolution,
-                                     (r_row, r_col))
-        if not path_dists:
-            self.get_logger().warn('Robot cell not free in /map, using straight-line cost.')
-            path_dists = None
-
         # 4: Score candidates and pick the best.
         decider = WaypointDecider(a=self.a, b=self.b)
         best, utility = decider.choose(
-            waypoints, robot_x, robot_y, self.blacklist, path_dists)
+            waypoints, robot_x, robot_y, self.blacklist)
 
         if best is None and self.blacklist:
             # everything is inside a blacklist circle, so clear it and score again
@@ -210,23 +197,18 @@ class FrontierExplorer(Node):
                 f'{len(self.blacklist)} entries and retrying.')
             self.blacklist = []
             best, utility = decider.choose(
-                waypoints, robot_x, robot_y, self.blacklist, path_dists)
+                waypoints, robot_x, robot_y, self.blacklist)
 
         if best is None:
             self.get_logger().info('No usable waypoint after clearing blacklist, nothing to do.')
             return
 
-        # log chosen goal
-        straight = math.hypot(best.x - robot_x, best.y - robot_y)
-        walk = path_dists.get((best.row, best.col)) if path_dists else straight
         self.get_logger().info(
-            f'Chosen goal ({best.x:.2f}, {best.y:.2f}) gain={best.gain:.1f}m2 '
-            f'walk={walk:.1f}m straight={straight:.1f}m utility={utility:.1f}')
+            f'Chosen goal ({best.x:.2f}, {best.y:.2f}) '
+            f'gain={best.gain:.1f} utility={utility:.1f}')
 
         # 5) Send it to Nav2.
-        yaw = best.yaw
-        if yaw is None:
-            yaw = math.atan2(best.y - robot_y, best.x - robot_x)   # face direction of travel
+        yaw = math.atan2(best.y - robot_y, best.x - robot_x)   # face direction of travel
         self.publish_goal(best.x, best.y, yaw)
         self.current_goal = (best.x, best.y)
         self.navigating = True
@@ -279,8 +261,6 @@ class FrontierExplorer(Node):
                 c = self.costmap_cost(nx, ny)
                 if c is None or c < 0 or c > self.max_goal_cost:
                     continue
-                if not self.map_is_free(nx, ny):
-                    continue                        # only cells /map knows are free
                 d2 = d_row * d_row + d_col * d_col
                 if best_d2 is None or d2 < best_d2:
                     best_d2 = d2
@@ -296,18 +276,6 @@ class FrontierExplorer(Node):
         goal.pose.orientation.z = math.sin(yaw / 2.0)
         goal.pose.orientation.w = math.cos(yaw / 2.0)
         self.goal_pub.publish(goal)
-
-    def map_is_free(self, x, y):
-        """True if /map says world (x, y) is a known free cell."""
-        m = self.latest_map
-        if m is None:
-            return True
-        info = m.info
-        col = int((x - info.origin.position.x) / info.resolution)
-        row = int((y - info.origin.position.y) / info.resolution)
-        if row < 0 or row >= info.height or col < 0 or col >= info.width:
-            return False
-        return m.data[row * info.width + col] == 0
 
 
 def main(args=None):
