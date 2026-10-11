@@ -32,7 +32,7 @@ mkdir -p ~/metr4202_ws/src && cd ~/metr4202_ws/src
 git clone https://github.com/mitchbradshaw/metr4202_2026_team10.git
 git clone https://github.com/METR4202/metr4202_aruco_explore.git
 ```
-3. Build from the workspace root (not from inside the repo)
+3. Build from the workspace root (not inside the repo)
 ```
 source /opt/ros/humble/setup.bash
 export TURTLEBOT3_MODEL=waffle_pi
@@ -41,7 +41,7 @@ rosdep install --from-paths src --ignore-src -r -y
 colcon build --symlink-install
 source install/setup.bash
 ```
-Every new terminal needs the two `source` lines and the `export` again.
+Every new terminal needs the two `source` and `export` lines again.
 
 
 **Running in simulation**
@@ -66,7 +66,7 @@ What you should see: the robot spawns, Nav2 and RViz start after about 10 s, and
 
 **Running on the real robot**
 
-Bring up the TurtleBot as normal and check the camera topic name with `ros2 topic list | grep camera` (it is normally compressed on the Pi). Then:
+Bring up the TurtleBot as normal and check the camera topic name with `ros2 topic list | grep camera` (it is normally compressed). Then:
 ```
 ros2 launch team10_bringup stack.launch.py use_sim_time:=false use_compressed:=true image_topic:=/camera/image_raw/compressed
 ```

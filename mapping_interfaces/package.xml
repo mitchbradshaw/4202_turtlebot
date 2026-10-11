@@ -4,6 +4,8 @@
   <name>mapping_interfaces</name>
   <version>0.0.1</version>
   <description>Messages for ArUco marker detections (METR4202 team project).</description>
+  <maintainer email="einaraug@stud.ntnu.no">Einar Augestad</maintainer>
+  <maintainer email="ingskastro@gmail.com">Ingrid Skålnes Strømme</maintainer>
   <maintainer email="bradcronin013@gmail.com">Brad Cronin</maintainer>
   <maintainer email="mmebradshaw@gmail.com">Mitch Bradshaw</maintainer>
   <license>Apache-2.0</license>
