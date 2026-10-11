@@ -18,7 +18,8 @@ setup(
     zip_safe=True,
     maintainer='metr4202',
     maintainer_email='metr4202@todo.todo',
-    description='TODO: Package description',
+    description='Exploration package manages the movement of the turtlebot, using \
+        algorithms to decide what path the bot takes in mapping towards frontier cells',
     license='TODO: License declaration',
     extras_require={
         'test': [
