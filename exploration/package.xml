@@ -3,9 +3,10 @@
 <package format="3">
   <name>exploration</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
-  <maintainer email="metr4202@todo.todo">metr4202</maintainer>
-  <license>TODO: License declaration</license>
+  <description>Exploration package manages the movement of the turtlebot, using algorithms to decide what path the bot takes in mapping towards frontier cells</description>
+  <maintainer email="einaraug@stud.ntnu.no">Einar Augestad</maintainer>
+  <maintainer email="ingskastro@gmail.com">Ingrid Skålnes Strømme</maintainer>
+  <license>Apache-2.0</license>
 
   <depend>rclpy</depend>
   <depend>nav_msgs</depend>

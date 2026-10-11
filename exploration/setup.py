@@ -16,11 +16,11 @@ setup(
     ],
     install_requires=['setuptools'],
     zip_safe=True,
-    maintainer='metr4202',
-    maintainer_email='metr4202@todo.todo',
+    maintainer='Einar Augestad, Ingrid Skålnes Strømme',
+    maintainer_email='einaraug@stud.ntnu.no, ingskastro@gmail.com',
     description='Exploration package manages the movement of the turtlebot, using \
         algorithms to decide what path the bot takes in mapping towards frontier cells',
-    license='TODO: License declaration',
+    license='Apache-2.0',
     extras_require={
         'test': [
             'pytest',

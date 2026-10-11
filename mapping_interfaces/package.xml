@@ -4,7 +4,8 @@
   <name>mapping_interfaces</name>
   <version>0.0.1</version>
   <description>Messages for ArUco marker detections (METR4202 team project).</description>
-  <maintainer email="todo@todo.todo">todo</maintainer>
+  <maintainer email="bradcronin013@gmail.com">Brad Cronin</maintainer>
+  <maintainer email="mmebradshaw@gmail.com">Mitch Bradshaw</maintainer>
   <license>Apache-2.0</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>

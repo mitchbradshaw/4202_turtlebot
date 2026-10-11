@@ -4,8 +4,9 @@
   <name>mapping_pkg</name>
   <version>0.0.0</version>
   <description>METR4202 ArUco marker detection for TurtleBot3 Waffle Pi</description>
-  <maintainer email="mitch@todo.todo">mitch</maintainer>
-  <license>TODO: License declaration</license>
+  <maintainer email="mmebradshaw@gmail.com">Mitch Bradshaw</maintainer>
+  <maintainer email="bradcronin013@gmail.com">Brad Cronin</maintainer>
+  <license>Apache-2.0</license>
 
   <depend>rclpy</depend>
   <exec_depend>mapping_interfaces</exec_depend>

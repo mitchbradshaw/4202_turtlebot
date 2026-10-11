@@ -18,10 +18,10 @@ setup(
     ],
     install_requires=['setuptools'],
     zip_safe=True,
-    maintainer='mitch',
-    maintainer_email='mitch@todo.todo',
+    maintainer='Mitch Bradshaw, Brad Cronin',
+    maintainer_email='mmebradshaw@gmail.com, bradcronin013@gmail.com',
     description='METR4202 ArUco marker detection for TurtleBot3 Waffle Pi',
-    license='TODO: License declaration',
+    license='Apache-2.0',
     extras_require={
         'test': [
             'pytest',

@@ -15,9 +15,9 @@ setup(
     ],
     install_requires=['setuptools'],
     zip_safe=True,
-    maintainer='team10',
-    maintainer_email='todo@todo.com',
+    maintainer='Einar Augestad',
+    maintainer_email='einaraug@stud.ntnu.no',
     description='Launch files that start the full team 10 system',
-    license='TODO',
+    license='Apache-2.0',
     entry_points={'console_scripts': []},
 )
