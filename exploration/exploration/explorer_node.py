@@ -97,6 +97,7 @@ class FrontierExplorer(Node):
         if self.hold_timer is not None:
             return                      # already holding; Nav2 can report IDLE twice
 
+        # Check if robot reached goal, and start planning next goal
         if self.current_goal is not None:
             robot = self.lookup_robot_pose()
             if robot is not None:
@@ -104,8 +105,9 @@ class FrontierExplorer(Node):
                 goal_x, goal_y = self.current_goal
                 dist = math.sqrt((goal_x - robot_x) ** 2 + (goal_y - robot_y) ** 2)
                 if dist > self.goal_reached_dist:
-                    self.get_logger().info(f'Goal failed, blacklisted: {self.current_goal}')
-            self.blacklist.append(self.current_goal)
+                    self.blacklist.append(self.current_goal)
+                    self.get_logger().info(
+                        f'Goal failed, blacklisted: {self.current_goal}')
 
         # Stay "navigating" during the hold so map_callback does not plan early.
         self.goal_sent_time = None
