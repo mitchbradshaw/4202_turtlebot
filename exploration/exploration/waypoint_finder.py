@@ -17,18 +17,19 @@ The owning node passes in the latest /map data every cycle.
 """
 
 from collections import deque
-
+import math
 
 class Waypoint:
     """A single candidate goal the robot could drive to."""
 
-    def __init__(self, row, col, x, y, gain, cluster_size):
+    def __init__(self, row, col, x, y, gain, cluster_size, yaw=None):
         self.row = row                    # grid row of the waypoint cell
         self.col = col                    # grid column of the waypoint cell
         self.x = x                        # world x in the map frame [m]
         self.y = y                        # world y in the map frame [m]
         self.gain = gain                  # estimated info gain (unknown cells in disk)
         self.cluster_size = cluster_size  # number of frontier cells that formed it
+        self.yaw = yaw                    # [rad] direction into the unknown
 
 
 class WaypointFinder:
@@ -72,22 +73,20 @@ class WaypointFinder:
                 continue
 
             # One representative cell for the whole cluster.
-            cell = self._cluster_waypoint(cluster)
             # step back a little from frontier so goal is accepted by Nav2
             # -> goals near wall perimeters are skipped or skew paths
-            cell = self._pull_back_from_frontier(data, width, height, cell)
+            frontier_cell = self._cluster_waypoint(cluster)
+            cell = self._pull_back_from_frontier(data, width, height, frontier_cell)
             w_row, w_col = cell
+            f_row, f_col = frontier_cell
+            yaw = None
+            if cell != frontier_cell:
+                # +x is +col and +y is +row in an OccupancyGrid, so this is map yaw.
+                yaw = math.atan2(f_row - w_row, f_col - w_col)
 
-            # How much unknown space would we likely reveal from here?
-            gain = self._estimate_gain(data, width, height, cell)
-
-            # Grid cell -> world coordinates so the decider can measure distance
-            # against the robot pose (which lives in the map frame, in metres).
+            gain = self._estimate_gain(data, width, height, cell, info.resolution)
             x, y = self._grid_to_world(w_row, w_col, info)
-
-            waypoints.append(
-                Waypoint(w_row, w_col, x, y, gain, len(cluster))
-            )
+            waypoints.append(Waypoint(w_row, w_col, x, y, gain, len(cluster), yaw))
 
         return waypoints
 
@@ -211,7 +210,7 @@ class WaypointFinder:
 
     # ---- step 3: info gain = unknown cells inside the sensor disk ------------
 
-    def _estimate_gain(self, data, width, height, waypoint):
+    def _estimate_gain(self, data, width, height, waypoint, resolution):
         w_row, w_col = waypoint
         r = self.sensor_radius_cells
         r_sq = r * r
@@ -232,7 +231,7 @@ class WaypointFinder:
                 if data[idx] == self.unknown_value:
                     unknown_count += 1
 
-        return unknown_count
+        return unknown_count * resolution * resolution
 
     # ---- step 4: grid -> world ----------------------------------------------
 

@@ -16,6 +16,7 @@ https://docs.ros.org/en/humble/Tutorials/Intermediate/Tf2/Adding-A-Frame-Py.html
 
 import numpy as np
 import rclpy
+import math
 from rclpy.duration import Duration
 from rclpy.node import Node
 from rclpy.time import Time
@@ -33,7 +34,8 @@ from tf2_geometry_msgs import do_transform_point
 #rviz display
 from visualization_msgs.msg import Marker, MarkerArray
  
-MAX_RANGE = 2
+MAX_RANGE = 2.0        # [m] sightings closer than this are averaged into the estimate
+HINT_RANGE = 4.0       # [m] sightings up to this are kept only as "go look" hints
  
  
 class MapMarkersNode(Node):
@@ -61,6 +63,12 @@ class MapMarkersNode(Node):
         self.rviz_pub = self.create_publisher(MarkerArray, '/aruco/map_markers', 10)
         self.declare_parameter('output_file','/tmp/aruco_markers.csv')
         self.create_timer(5.0, self.write_report)
+
+        #for aruco sightings
+        self.hints = {}              # id -> np.array position from a far sighting
+        self.seen_from = {}          # id -> (x, y) of the camera when last seen
+        self.confirm_count = self.declare_parameter('confirm_count', 8).value
+        self.unconfirmed_pub = self.create_publisher(MarkerArray, '/aruco/unconfirmed', 10)
  
     #assigns map positions to aruco marker
     def get_detected_markers(self, msg):
@@ -70,7 +78,7 @@ class MapMarkersNode(Node):
  
         #Checks range of marker detection, bigger will have larger error.
         #Keeps the close markers and skips the far ones.
-        in_range = [m for m in msg.markers if m.range_m <= MAX_RANGE]
+        in_range = [m for m in msg.markers if m.range_m <= HINT_RANGE]
         if not in_range:
             return
  
@@ -88,21 +96,23 @@ class MapMarkersNode(Node):
                 f'Could not transform {from_frame} to {to_frame} : {ex}')
             return
  
+        cam_x = transform.transform.translation.x
+        cam_y = transform.transform.translation.y
+
         for mkr in in_range:
- 
             cameraPoint = PointStamped()
- 
             cameraPoint.header = msg.header
             cameraPoint.point = mkr.position
- 
-            # camera to map transform
-            mapPoint_stamped = do_transform_point(cameraPoint, transform)
- 
-            # x, y and z
-            p = mapPoint_stamped.point
- 
-            self.update_markers(mkr.id, np.array([p.x, p.y, p.z]))
- 
+            p = do_transform_point(cameraPoint, transform).point
+            pos = np.array([p.x, p.y, p.z])
+
+            self.seen_from[mkr.id] = (cam_x, cam_y)
+            if mkr.range_m <= MAX_RANGE:
+                self.update_markers(mkr.id, pos)
+                self.hints.pop(mkr.id, None)
+            elif mkr.id not in self.detected_markers:
+                self.hints[mkr.id] = pos          # far glimpse: remember roughly where
+
         self.place_marker()
  
     def update_markers(self, marker_id, position):
@@ -128,12 +138,12 @@ class MapMarkersNode(Node):
              # running mean
              old = self.detected_markers[marker_id]
              self.detected_markers[marker_id] = old + (position - old) / (n+1)
-             self.detection_counts[marker_id] = n + 1
+        self.detection_counts[marker_id] = n + 1
 
         p = self.detected_markers[marker_id]
         # log marker changes to terminal, throttle prevents flooding
         self.get_logger().info(
-             f'marker {marker_id}: x={p[0]:.2f} y={p[1]:.2f} (map)', 
+             f'marker {marker_id}: x={p[0]:.2f} y={p[1]:.2f} (map) n={self.detection_counts[marker_id]}', 
              throttle_duration_sec=2.0)
 
     def write_report(self):
@@ -169,6 +179,44 @@ class MapMarkersNode(Node):
             out.markers.append(mkr)
  
         self.rviz_pub.publish(out)
+
+        # Orange arrows: markers that still need a close look, pointing toward
+        # where the camera was when it saw them.
+        pending = MarkerArray()
+        clear = Marker()
+        clear.action = Marker.DELETEALL
+        pending.markers.append(clear)
+
+        candidates = dict(self.hints)
+        for marker_id, position in self.detected_markers.items():
+            if self.detection_counts.get(marker_id, 0) < self.confirm_count:
+                candidates[marker_id] = position
+
+        for marker_id, position in candidates.items():
+            cam = self.seen_from.get(marker_id)
+            if cam is None:
+                continue
+            yaw = math.atan2(cam[1] - position[1], cam[0] - position[0])
+            mkr = Marker()
+            mkr.header.frame_id = self.map_frame
+            mkr.ns = 'unconfirmed'
+            mkr.id = marker_id
+            mkr.type = Marker.ARROW
+            mkr.pose.position.x = float(position[0])
+            mkr.pose.position.y = float(position[1])
+            mkr.pose.position.z = 0.0
+            mkr.pose.orientation.z = math.sin(yaw / 2.0)
+            mkr.pose.orientation.w = math.cos(yaw / 2.0)
+            mkr.scale.x = 0.4          # arrow length
+            mkr.scale.y = 0.05
+            mkr.scale.z = 0.05
+            mkr.color.r = 1.0
+            mkr.color.g = 0.6
+            mkr.color.b = 0.0
+            mkr.color.a = 1.0
+            pending.markers.append(mkr)
+
+        self.unconfirmed_pub.publish(pending)
  
  
 def main(args=None):

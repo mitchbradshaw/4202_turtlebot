@@ -21,26 +21,13 @@ class CameraNode(Node):
     def __init__(self):
         super().__init__('camera_node')
 
-        # ---- Parameters -------------------------------------------------
-        # Defaults match the Waffle Pi Gazebo model (turtlebot3_gazebo
-        # models/turtlebot3_waffle_pi/model.sdf): sensor named "camera" with
-        # libgazebo_ros_camera and no namespace -> /camera/image_raw and
-        # /camera/camera_info, frame camera_rgb_optical_frame, 640x480.
-        #
-        # use_sim_time is NOT declared here: every rclpy node declares it
-        # automatically. Set it from the launch file / --ros-args.
+        # ---- Parameters ------------------------------------------------- 
         self.declare_parameter('image_topic', '/camera/image_raw')
         self.declare_parameter('camera_info_topic', '/camera/camera_info')
-        # If true, image_topic must point at a CompressedImage topic,
-        # e.g. /camera/image_raw/compressed. The topic name is used verbatim.
         self.declare_parameter('use_compressed', False)
         self.declare_parameter('debug_image_topic', '/aruco/debug_image')
-        # This is where MarkerDetectionArray goes for each frame
         self.declare_parameter('detections_topic', '/aruco/detections')
-        # 0.1 m verified from the world SDF: 0.1 x 0.1 box, texture is
-        # black edge-to-edge (no white margin).
         self.declare_parameter('marker_size', aruco_core.DEFAULT_MARKER_SIZE_M)
-        # DICT_6X6_1000 verified from the texture names 6x6_1000-{0,2,42}.png.
         self.declare_parameter('aruco_dictionary', aruco_core.DEFAULT_DICTIONARY)
 
         image_topic = self.get_parameter('image_topic').value
@@ -57,24 +44,8 @@ class CameraNode(Node):
         self.K = None
         self.dist = None
 
-        # ---- QoS --------------------------------------------------------
+        # ---- Subscribers --------------------------------------------------------
         # qos_profile_sensor_data = BEST_EFFORT reliability, KEEP_LAST depth 5.
-        #
-        # A BEST_EFFORT subscriber is compatible with BOTH best-effort and
-        # reliable publishers. A RELIABLE subscriber (the default when you
-        # pass a plain integer depth) is NOT compatible with a best-effort
-        # publisher, and ROS 2 gives you no error - you just receive nothing.
-        # So best-effort is the "always connects" choice for sensor input, and
-        # dropping an old frame is fine for us anyway.
-        #
-        # If no messages arrive, run:
-        #     ros2 topic info -v /camera/image_raw
-        # and compare the "QoS profile -> Reliability" of the Publisher(s)
-        # against this node's Subscription entry. Also check the publisher
-        # count is not 0 (wrong topic name) and the message type matches
-        # (Image vs CompressedImage).
-        #
-        # Used for camera_info as well, for the same reason.
         self.create_subscription(
             CameraInfo, camera_info_topic, self.camera_info_callback, qos_profile_sensor_data)
 
@@ -85,13 +56,10 @@ class CameraNode(Node):
             self.create_subscription(
                 Image, image_topic, self.image_callback, qos_profile_sensor_data)
 
-        # Publisher is RELIABLE (default), depth 10 for averages
+        # ---- Publishers --------------------------------------------------------
         self.detections_pub = self.create_publisher(MarkerDetectionArray, detections_topic, 10)
 
-        # Publisher is RELIABLE (default), depth 1: reliable publishers match
-        # both reliable and best-effort subscribers, so RViz connects whatever
-        # its Image display's reliability setting is. Depth 1 because stale
-        # debug frames are useless.
+        # Publisher is RELIABLE (default), depth 1
         self.debug_pub = self.create_publisher(Image, debug_image_topic, 1)
 
         self.get_logger().info(
@@ -101,18 +69,18 @@ class CameraNode(Node):
 
     def camera_info_callback(self, msg):
         if self.K is not None:
-            return  # Intrinsics don't change; cache the first valid message only.
+            return  # Intrinsics don't change - cache the first valid message only.
 
         K = np.array(msg.k, dtype=np.float64).reshape(3, 3)
         if K[0, 0] <= 0.0 or K[1, 1] <= 0.0:
-            # An uncalibrated / zeroed CameraInfo would make solvePnP garbage.
+            # An uncalibrated CameraInfo would make solvePnP garbage.
             self.get_logger().warn(
                 'CameraInfo has non-positive focal length; ignoring it.',
                 throttle_duration_sec=5.0)
             return
 
         self.K = K
-        self.dist = np.array(msg.d, dtype=np.float64)  # may be empty; aruco_core handles that
+        self.dist = np.array(msg.d, dtype=np.float64)  # may be empty, aruco_core handles that
         self.get_logger().info(
             f'Cached intrinsics from CameraInfo ({msg.width}x{msg.height}, '
             f'frame {msg.header.frame_id}): fx={K[0, 0]:.1f} fy={K[1, 1]:.1f} '
@@ -120,8 +88,7 @@ class CameraNode(Node):
 
     def image_callback(self, msg):
         if self.K is None:
-            # Throttling uses wall-clock time, so this still rate-limits
-            # correctly before /clock has started under use_sim_time.
+            # Throttling uses wall-clock time, this rate-limits
             self.get_logger().warn(
                 'No CameraInfo received yet; skipping image.', throttle_duration_sec=2.0)
             return
@@ -132,16 +99,16 @@ class CameraNode(Node):
                 image_bgr = self.bridge.compressed_imgmsg_to_cv2(msg, desired_encoding='bgr8')
             else:
                 image_bgr = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
-        except Exception as exc:  # cv_bridge raises CvBridgeError or others on bad input
+        except Exception as exc: 
             self.get_logger().error(f'cv_bridge conversion failed: {exc}',
                                     throttle_duration_sec=2.0)
             return
 
-        # ---- algorithm (all maths lives in aruco_core)
+        # ---- algorithm (maths in aruco_core)
         detections = aruco_core.detect_markers(
             image_bgr, self.K, self.dist, self.marker_size, self.dictionary_name)
 
-        # ---- detections -> published for each frame (so can tell diff between saw nothing and no data)
+        # ---- detections -> published for each frame 
         self.detections_pub.publish(self.to_detection_array(msg.header, detections))
 
 
@@ -150,15 +117,10 @@ class CameraNode(Node):
 
         # ---- array -> message
         debug_msg = self.bridge.cv2_to_imgmsg(annotated, encoding='bgr8')
-        # Reuse the source header: keeps the camera frame_id and, importantly
-        # under use_sim_time, the original (simulated/bag) capture time rather
-        # than "now". Later stages (tf2) will need that stamp to be right.
         debug_msg.header = msg.header
         self.debug_pub.publish(debug_msg)
 
         # ---- logging
-        # rclpy throttles per call site, so a throttled log inside a for-loop
-        # would only ever show the first marker. Build one line per frame.
         # tvec is in the camera OPTICAL frame: z forward, x right, y down.
         if detections:
             parts = [
@@ -173,7 +135,7 @@ class CameraNode(Node):
         """list[aruco_core.Detection] -> MarkerDetectionArray.
 
         header is the source image's header: its stamp is the capture time and
-        its frame_id is the optical frame the poses are expressed in. Map node can use this for positioning(?)
+        its frame_id is the optical frame the poses are expressed in. Map node can use this for positioning
         """
         out = MarkerDetectionArray()
         out.header = header

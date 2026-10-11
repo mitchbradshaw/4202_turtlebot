@@ -20,6 +20,7 @@ or, from the package directory with the workspace sourced:
 from exploration.frontier_detection import find_frontiers
 from exploration.waypoint_finder import WaypointFinder, Waypoint
 from exploration.waypoint_decider import WaypointDecider
+from exploration.path_distance import flood_distances
 
 
 # ---- helpers ------------------------------------------------------------
@@ -204,7 +205,7 @@ def test_gain_counts_unknown_and_is_zero_with_none_nearby():
         '......?????',
         '......?????',
     ])
-    gain_a = finder._estimate_gain(data_a, width_a, height_a, (5, 5))
+    gain_a = finder._estimate_gain(data_a, width_a, height_a, (5, 5), 1.0)
 
     # Map B: fully known, so nothing to reveal.
     data_b, width_b, height_b = build_grid([
@@ -220,7 +221,7 @@ def test_gain_counts_unknown_and_is_zero_with_none_nearby():
         '...........',
         '...........',
     ])
-    gain_b = finder._estimate_gain(data_b, width_b, height_b, (5, 5))
+    gain_b = finder._estimate_gain(data_b, width_b, height_b, (5, 5), 1.0)
 
     assert gain_a > 0
     assert gain_b == 0
@@ -310,3 +311,15 @@ def test_decider_returns_none_when_all_blacklisted():
 
     assert best is None
     assert utility is None
+
+def test_flood_goes_around_walls():
+    rows = [
+        '.....',
+        '####.',
+        '.....',
+    ]
+    data, width, height = build_grid(rows)
+    d = flood_distances(data, width, height, 1.0, (0, 0))
+    assert (1, 0) not in d            # a wall cell is never reached
+    assert d[(2, 0)] > 8.0            # straight-line is 2 m, the walk is ~8.8 m
+

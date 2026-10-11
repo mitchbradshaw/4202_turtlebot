@@ -33,7 +33,7 @@ class WaypointDecider:
 
     # ---- public entry point -------------------------------------------------
 
-    def choose(self, waypoints, robot_x, robot_y, blacklist):
+    def choose(self, waypoints, robot_x, robot_y, blacklist, path_dists=None):
         """
         waypoints : list[Waypoint] from WaypointFinder
         robot_x/y : robot position in the map frame [m] (from tf2)
@@ -44,11 +44,16 @@ class WaypointDecider:
         best_utility = None
 
         for wp in waypoints:
-            # Hard skip: a goal we already failed to reach.
             if self._is_blacklisted(wp, blacklist):
                 continue
 
-            cost = self._distance(robot_x, robot_y, wp.x, wp.y)
+            if path_dists is not None:
+                cost = path_dists.get((wp.row, wp.col))
+                if cost is None:
+                    continue            # the flood never got there
+            else:
+                cost = self._distance(robot_x, robot_y, wp.x, wp.y)
+
             # hard skip goals that are too close
             if cost < self.min_travel_dist:
                 continue
