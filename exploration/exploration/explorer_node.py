@@ -74,10 +74,12 @@ class FrontierExplorer(Node):
             PoseStamped, '/goal_pose', 10)
 
         self.marker_sub = self.create_subscription(
-            MarkerArray, '/aruco/map_markers', self.flag_marker)
+            MarkerArray, '/aruco/map_markers', self.flag_marker, 10)
 
-        # marker id -> position of explored markers
-        self.explored_markers = {}
+
+        self.seen_markers = {}
+        self.inspected_markers = set()
+        self.current_marker_id = None
         
         self.get_logger().info('Frontier explorer started.')
 
@@ -277,19 +279,14 @@ class FrontierExplorer(Node):
         return best
 
     def flag_marker(self, msg):
-        markers = msg
-
-        for marker in markers:
-            id = marker.id
-            pstn = []
-            pstn[0] = marker.pose.position.x
-            pstn[1] = marker.pose.position.y
+        
+        for marker in msg.markers:
+            marker_id = marker.id
+            x = marker.pose.position.x
+            y = marker.pose.position.y
 
             # update position with each new publication
-            self.explored_markers[id] = pstn
-        
-
-        
+            self.seen_markers[marker_id] = (x,y)
 
     def publish_goal(self, x, y, yaw=0.0):
         goal = PoseStamped()
