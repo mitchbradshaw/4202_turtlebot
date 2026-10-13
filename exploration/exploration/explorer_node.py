@@ -153,49 +153,53 @@ class FrontierExplorer(Node):
         info = msg.info
         data = msg.data
 
-        # 1: Detect frontier cells (pure logic module).
-        frontier_cells = find_frontiers(data, info.width, info.height)
-        if not frontier_cells:
-            self.get_logger().info('No frontiers left, exploration complete.')
-            return
-
-        # 2: Size knobs derived from map resolution + sensor range.
-        resolution = info.resolution
-        gain_radius_cells = int(round(self.gain_radius_m / resolution))
-        max_cluster_size = int(round((0.5 * self.sensor_range_m) / resolution))
-
-        finder = WaypointFinder(
-            max_cluster_size=max_cluster_size,
-            min_cluster_size=5,
-            sensor_radius_cells=gain_radius_cells,
-        )
-
-        waypoints = finder.find_waypoints(data, info, frontier_cells)
-        if not waypoints:
-            self.get_logger().info('No usable waypoints this cycle.')
-            return
-
-        # 2b: move each candidate out of the inflation ring, drop it if we can't
-        usable = []
-        for wp in waypoints:
-            moved = self.nudge_to_low_cost(wp.x, wp.y)
-            if moved is None:
-                continue
-            wp.x, wp.y = moved
-            usable.append(wp)
-        if not usable:
-            self.get_logger().info('All waypoints inside the inflation ring this cycle.')
-            return
-        
-        waypoints = usable
-
-        # 3: Where is the robot right now?
+        # Find robot position
         robot = self.lookup_robot_pose()
         if robot is None:
             self.get_logger().warn('No robot pose yet, will retry next map.')
             return
         robot_x, robot_y = robot
 
+        waypoints = []
+
+        # 1: Detect frontier cells 
+        frontier_cells = find_frontiers(data, info.width, info.height)
+
+        # 2: Find waypoints from frontier cells
+        if frontier_cells:
+            resolution = info.resolution
+            gain_radius_cells = int(round(self.gain_radius_m / resolution))
+            max_cluster_size = int(round((0.5 * self.sensor_range_m) / resolution))
+
+            finder = WaypointFinder(
+                max_cluster_size=max_cluster_size,
+                min_cluster_size=5,
+                sensor_radius_cells=gain_radius_cells,
+            )
+            
+            for wp in finder.find_waypoints(data, info, frontier_cells):
+                moved = self.nudge_to_low_cost(wp.x, wp.y)
+                if moved is None:
+                    continue
+                wp.x, wp.y = moved
+                waypoints.append(wp)
+
+        # 3: Find waypoints from markers
+        for marker_id in self.seen_markers:
+            if marker_in in self.inspected_markers:
+                continue
+            mx, my = self.seen_markers[marker_id]
+            moved = self.nudge_to_low_cost(mx, my, max_radius_m=1.0, max_cost=30, robot_pos=(robot_x, robot_y))
+
+            if moved is None:
+                continue
+            gx, gy = moved
+            waypoints.append(Waypoint(None, None, gx, gy, gain = 0.0, cluster_size = 0, marker_id = marker_id, marker_x = mx, marker_y = my))
+
+        if not waypoints:
+            self.get_logger().info("No frontier or markers left, exploration complete!")
+            return
+        
         # 4: Score candidates and pick the best.
         decider = WaypointDecider(a=self.a, b=self.b)
         best, utility = decider.choose(
@@ -218,10 +222,15 @@ class FrontierExplorer(Node):
             f'Chosen goal ({best.x:.2f}, {best.y:.2f}) '
             f'gain={best.gain:.1f} utility={utility:.1f}')
 
-        # 5) Send it to Nav2.
-        yaw = math.atan2(best.y - robot_y, best.x - robot_x)   # face direction of travel
+        # 5: Send best waypoint to Nav2
+        if best.marker_id is not None:
+            yaw = math.atan2(best.marker_y - best.y, best.marker_x - best.x)   # face direction of marker
+        else:
+            yaw = math.atan2(best.y - robot.y, best.x - robot.x) # face direction of travel
+            
         self.publish_goal(best.x, best.y, yaw)
         self.current_goal = (best.x, best.y)
+        self.current_marker_id = best.marker_id 
         self.navigating = True
         self.goal_sent_time = self.get_clock().now()
 
@@ -253,25 +262,43 @@ class FrontierExplorer(Node):
             return None
         return cm.data[row * info.width + col]
 
-    def nudge_to_low_cost(self, x, y, max_radius_m=0.5):
+    def nudge_to_low_cost(self, wp_x, wp_y, max_radius_m=0.5, max_cost=None, robot_pos=None):
         """
         Nearest (x, y) whose cost is <= max_goal_cost, searching a square
         up to max_radius_m wide. None if the whole neighbourhood is costly.
         """
+        
+        if max_cost is None:
+            max_cost = self.max_goal_cost
+            
         cm = self.latest_costmap
         if cm is None:
-            return (x, y)                       # no costmap yet: trust the map
+            return (wp_x, wp_y)                       # no costmap yet: trust the map
+            
         res = cm.info.resolution
         steps = int(round(max_radius_m / res))
         best = None
         best_d2 = None
+        
         for d_row in range(-steps, steps + 1):
             for d_col in range(-steps, steps + 1):
-                nx = x + d_col * res
-                ny = y + d_row * res
+                nx = wp_x + d_col * res
+                ny = wp_y + d_row * res
                 c = self.costmap_cost(nx, ny)
+                
                 if c is None or c < 0 or c > self.max_goal_cost:
                     continue
+
+                if robot_pos is not None:
+                    # k = candidate - waypoint, r = robot - waypoint
+                    k_x = nx - wp_x
+                    k_y = ky - wp_y
+                    r_x = robot_pos[0] - wp_x
+                    r_y = robot_pos[1] - wp_y
+                    
+                    if k_x * rx + k_y * ry <= 0: # Wrong side of the wall
+                        continue
+                    
                 d2 = d_row * d_row + d_col * d_col
                 if best_d2 is None or d2 < best_d2:
                     best_d2 = d2
