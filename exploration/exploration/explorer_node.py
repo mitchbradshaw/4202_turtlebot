@@ -21,6 +21,7 @@ from rclpy.node import Node
 from nav_msgs.msg import OccupancyGrid
 from geometry_msgs.msg import PoseStamped
 from nav2_msgs.msg import BehaviorTreeLog
+from visualization_msgs.msg import Marker, MarkerArray
 
 import tf2_ros
 from tf2_ros import TransformException
@@ -72,6 +73,12 @@ class FrontierExplorer(Node):
         self.goal_pub = self.create_publisher(
             PoseStamped, '/goal_pose', 10)
 
+        self.marker_sub = self.create_subscription(
+            MarkerArray, '/aruco/map_markers', self.flag_marker)
+
+        # marker id -> position of explored markers
+        self.explored_markers = {}
+        
         self.get_logger().info('Frontier explorer started.')
 
         # when turning at goal
@@ -268,6 +275,21 @@ class FrontierExplorer(Node):
                     best_d2 = d2
                     best = (nx, ny)
         return best
+
+    def flag_marker(self, msg):
+        markers = msg
+
+        for marker in markers:
+            id = marker.id
+            pstn = []
+            pstn[0] = marker.pose.position.x
+            pstn[1] = marker.pose.position.y
+
+            # update position with each new publication
+            self.explored_markers[id] = pstn
+        
+
+        
 
     def publish_goal(self, x, y, yaw=0.0):
         goal = PoseStamped()
