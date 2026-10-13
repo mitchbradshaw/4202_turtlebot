@@ -22,14 +22,16 @@ from collections import deque
 class Waypoint:
     """A single candidate goal the robot could drive to."""
 
-    def __init__(self, row, col, x, y, gain, cluster_size):
+    def __init__(self, row, col, x, y, gain, cluster_size, marker_id=None, marker_x=None, marker_y=None):
         self.row = row                    # grid row of the waypoint cell
         self.col = col                    # grid column of the waypoint cell
         self.x = x                        # world x in the map frame [m]
         self.y = y                        # world y in the map frame [m]
         self.gain = gain                  # estimated info gain (unknown cells in disk)
         self.cluster_size = cluster_size  # number of frontier cells that formed it
-
+        self.marker_id = marker_id
+        self.marker_x = marker_x
+        self.marker_y = marker_y
 
 class WaypointFinder:
 
