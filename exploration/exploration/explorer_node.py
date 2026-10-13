@@ -273,7 +273,7 @@ class FrontierExplorer(Node):
 
     def nudge_to_low_cost(self, wp_x, wp_y, max_radius_m=0.5, max_cost=None, robot_pos=None):
         """
-        Nearest (x, y) whose cost is <= max_goal_cost, searching a square
+        Nearest (x, y) whose cost is <= goal_cost, searching a square
         up to max_radius_m wide. None if the whole neighbourhood is costly.
         """
         
