@@ -27,7 +27,7 @@ import tf2_ros
 from tf2_ros import TransformException
 
 from exploration.frontier_detection import find_frontiers
-from exploration.waypoint_finder import WaypointFinder
+from exploration.waypoint_finder import WaypointFinder, Waypoint
 from exploration.waypoint_decider import WaypointDecider
 
 
@@ -118,6 +118,12 @@ class FrontierExplorer(Node):
                     self.get_logger().info(
                         f'Goal failed, blacklisted: {self.current_goal}')
 
+        # Marker is done, whether we reached view pose or note
+        if self.current_marker_id is not None:
+            self.get_logger().info(f"Marker {self.current_marker_id} inspected.")
+            self.inspected_markers.add(self.current_marker_id)
+            self.current_marker_id = None
+        
         # Stay "navigating" during the hold so map_callback does not plan early.
         self.goal_sent_time = None
         self.hold_timer = self.create_timer(self.hold_s, self._hold_done)
@@ -141,6 +147,9 @@ class FrontierExplorer(Node):
             self.blacklist.append(self.current_goal)
             self.navigating = False
             self.goal_sent_time = None
+            if self.current_marker_id is not None:  # We have a marker
+                self.inspected_markers.add(self.current_marker_id)
+                self.current_marker_id = None
             self.plan_and_send_goal()
 
     # ---- the core: frontiers -> finder -> decider -> goal -------------------
@@ -186,7 +195,7 @@ class FrontierExplorer(Node):
 
         # 3: Find waypoints from markers
         for marker_id in self.seen_markers:
-            if marker_in in self.inspected_markers:
+            if marker_id in self.inspected_markers:
                 continue
             mx, my = self.seen_markers[marker_id]
             moved = self.nudge_to_low_cost(mx, my, max_radius_m=1.0, max_cost=30, robot_pos=(robot_x, robot_y))
@@ -226,7 +235,7 @@ class FrontierExplorer(Node):
         if best.marker_id is not None:
             yaw = math.atan2(best.marker_y - best.y, best.marker_x - best.x)   # face direction of marker
         else:
-            yaw = math.atan2(best.y - robot.y, best.x - robot.x) # face direction of travel
+            yaw = math.atan2(best.y - robot_y, best.x - robot_x) # face direction of travel
             
         self.publish_goal(best.x, best.y, yaw)
         self.current_goal = (best.x, best.y)
@@ -286,17 +295,17 @@ class FrontierExplorer(Node):
                 ny = wp_y + d_row * res
                 c = self.costmap_cost(nx, ny)
                 
-                if c is None or c < 0 or c > self.max_goal_cost:
+                if c is None or c < 0 or c > max_cost:
                     continue
 
                 if robot_pos is not None:
                     # k = candidate - waypoint, r = robot - waypoint
                     k_x = nx - wp_x
-                    k_y = ky - wp_y
+                    k_y = ny - wp_y
                     r_x = robot_pos[0] - wp_x
                     r_y = robot_pos[1] - wp_y
                     
-                    if k_x * rx + k_y * ry <= 0: # Wrong side of the wall
+                    if k_x * r_x + k_y * r_y <= 0: # Wrong side of the wall
                         continue
                     
                 d2 = d_row * d_row + d_col * d_col
