@@ -4,11 +4,11 @@ waypoint_decider.py
 Scores the candidate waypoints from WaypointFinder and returns the best one.
 
 Utility per candidate:
-    U = a * gain  -  b * cost  -  penalties
+    U = a * gain  -  b * cost  -  bonus
 
     gain      : from the finder (unknown cells reachable from the waypoint)
     cost      : straight-line distance from the robot to the waypoint [m]
-    penalties : blacklist (failed goals) + a too-close term to stop jitter
+    bonus     : bonus gain for markers
 
 The class is pure logic. The owning node supplies the robot pose (from tf2)
 and the current blacklist every cycle.
