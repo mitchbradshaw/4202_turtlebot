@@ -4,7 +4,7 @@ waypoint_decider.py
 Scores the candidate waypoints from WaypointFinder and returns the best one.
 
 Utility per candidate:
-    U = a * gain  -  b * cost  -  bonus
+    U = a * gain  -  b * cost  +  bonus
 
     gain      : from the finder (unknown cells reachable from the waypoint)
     cost      : straight-line distance from the robot to the waypoint [m]
@@ -24,13 +24,11 @@ class WaypointDecider:
                  b,
                  blacklist_radius=0.5,
                  min_travel_dist=0.5,
-                 close_penalty=1000.0
                  marker_bonus=50.0):
         self.a = a                                # weight on information gain
         self.b = b                                # weight on travel cost
         self.blacklist_radius = blacklist_radius  # [m] how near a failed goal counts as "same"
         self.min_travel_dist = min_travel_dist    # [m] below this, apply the jitter penalty
-        self.close_penalty = close_penalty        # penalty added for too-close goals
         self.marker_bonus = marker_bonus          # bonus for markers
 
     # ---- public entry point -------------------------------------------------
