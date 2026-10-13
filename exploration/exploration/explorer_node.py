@@ -106,6 +106,9 @@ class FrontierExplorer(Node):
         if self.hold_timer is not None:
             return                      # already holding; Nav2 can report IDLE twice
 
+        if not self.navigating:
+            return
+
         # Check if robot reached goal, and start planning next goal
         if self.current_goal is not None:
             robot = self.lookup_robot_pose()
@@ -203,6 +206,13 @@ class FrontierExplorer(Node):
             if moved is None:
                 continue
             gx, gy = moved
+            
+            d_x = gx - robot_x
+            d_y = gy - robot_y
+            if math.sqrt(d_x*d_x + d_y*d_y) < 0.5:
+                self.inspected_markers.add(marker_id)     # Already there
+                continue
+                
             waypoints.append(Waypoint(None, None, gx, gy, gain = 0.0, cluster_size = 0, marker_id = marker_id, marker_x = mx, marker_y = my))
 
         if not waypoints:
