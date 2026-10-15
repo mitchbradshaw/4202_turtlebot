@@ -4,11 +4,11 @@ waypoint_decider.py
 Scores the candidate waypoints from WaypointFinder and returns the best one.
 
 Utility per candidate:
-    U = a * gain  -  b * cost  -  penalties
+    U = a * gain  -  b * cost  +  bonus
 
     gain      : from the finder (unknown cells reachable from the waypoint)
     cost      : straight-line distance from the robot to the waypoint [m]
-    penalties : blacklist (failed goals) + a too-close term to stop jitter
+    bonus     : bonus gain for markers
 
 The class is pure logic. The owning node supplies the robot pose (from tf2)
 and the current blacklist every cycle.
@@ -24,12 +24,12 @@ class WaypointDecider:
                  b,
                  blacklist_radius=0.5,
                  min_travel_dist=0.5,
-                 close_penalty=1000.0):
+                 marker_bonus=50.0):
         self.a = a                                # weight on information gain
         self.b = b                                # weight on travel cost
         self.blacklist_radius = blacklist_radius  # [m] how near a failed goal counts as "same"
         self.min_travel_dist = min_travel_dist    # [m] below this, apply the jitter penalty
-        self.close_penalty = close_penalty        # penalty added for too-close goals
+        self.marker_bonus = marker_bonus          # bonus for markers
 
     # ---- public entry point -------------------------------------------------
 
@@ -53,10 +53,12 @@ class WaypointDecider:
             # hard skip goals that are too close
             if cost < self.min_travel_dist:
                 continue
-            
-            penalty = self._penalty(cost)
 
-            utility = self.a * wp.gain - self.b * cost - penalty
+            bonus = 0.0
+            if wp.marker_id is not None:
+                bonus = self.marker_bonus
+
+            utility = self.a * wp.gain - self.b * cost + bonus
 
             if best_utility is None or utility > best_utility:
                 best_utility = utility
@@ -76,16 +78,3 @@ class WaypointDecider:
             if self._distance(wp.x, wp.y, b_x, b_y) < self.blacklist_radius:
                 return True
         return False
-
-    def _penalty(self, cost):
-        penalty = 0.0
-
-        # Discourage goals almost on top of the robot: they make the robot twitch
-        # between tiny nearby frontiers instead of making real progress.
-        if cost < self.min_travel_dist:
-            penalty += self.close_penalty
-
-        # Extra penalty terms go here later, e.g. a revisit penalty or a
-        # penalty for goals pointing back into already-explored space.
-
-        return penalty
